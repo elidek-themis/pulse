@@ -123,9 +123,6 @@ def set_ground_truth(results: PulseResults) -> None:
     st.session_state.ground_truth = [a / (a + b) - b / (a + b) for a, b in zip(pct_a, pct_b)]
 
 
-st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
-
-
 def setup_sidebar(results: PulseResults) -> None:
     with st.sidebar:
         st.divider()
@@ -215,7 +212,9 @@ def lineplot_section(diff: pd.DataFrame) -> None:
         st.pyplot(fig)
 
 
+st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
 runs = get_runs_df()
+
 with st.sidebar:
     st.write("Repository")
     model, task = select(runs=runs)
