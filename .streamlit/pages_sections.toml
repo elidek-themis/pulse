@@ -1,0 +1,14 @@
+[[pages]]
+name = "PULSE"
+icon = ""
+is_section = true
+
+[[pages]]
+path = "pages/referendum.py"
+name = "Referendum"
+icon = ""
+
+[[pages]]
+path = "pages/results.py"
+name = "Experiments"
+icon = ""

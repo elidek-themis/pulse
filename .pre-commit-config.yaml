@@ -1,0 +1,42 @@
+default_stages:
+- pre-commit
+exclude: .git|README.md|poetry.lock|.csv|.ipynb
+fail_fast: true
+repos:
+# Detect secrets
+-   repo: https://github.com/Yelp/detect-secrets.git
+    rev: v1.5.0
+    hooks:
+    -   id: detect-secrets
+        name: detect secrets
+        args:
+        - --baseline
+        - .pre-commit/.secrets.baseline
+# Pre-commit hooks
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+    -   id: check-merge-conflict
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-json
+        files: \.(json)$
+    -   id: check-toml
+        files: \.(toml)$
+    -   id: check-yaml
+        files: \.(yaml)$
+        args:
+        - --unsafe  # allow !function tag
+# Ruff
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.9
+    hooks:
+      - id: ruff
+        name: ruff linter
+        args: ["--diff"]
+        types:
+        - python
+      - id: ruff-format
+        name: ruff formatter
+        args: ["--check", "--diff"]
+        types: [python]
