@@ -13,6 +13,7 @@ source .venv/bin/activate
 # run the app
 pulse
 ```
+The Streamlit web interface will automatically launch at: [http://localhost:8501](http://localhost:8501)
 
 You can serve a model locally using [vLLM](https://docs.vllm.ai/en/stable/) by running:
 ```bash
