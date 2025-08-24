@@ -1,0 +1,44 @@
+custom_dataset: null
+dataset_kwargs: null
+dataset_name: null
+dataset_path: null
+description: You are a resident of U.S.
+doc_to_audio: null
+doc_to_choice: null
+doc_to_decontamination_query: null
+doc_to_image: null
+doc_to_target: null
+doc_to_text: What will you vote for in the 2024 U.S. elections?
+fewshot_config: null
+fewshot_delimiter: '
+
+
+  '
+fewshot_split: null
+filter_list: null
+gen_prefix: I will vote for
+generation_kwargs:
+  do_sample: false
+  temperature: 0
+  until:
+  - '
+
+
+    '
+metadata: null
+metric_list: null
+num_fewshot: null
+output_type: generate_until
+process_docs: null
+process_results: null
+repeats: 1
+should_decontaminate: false
+tag: null
+target_delimiter: ' '
+task: test
+task_alias: null
+test_split: null
+training_split: null
+unsafe_code: false
+use_prompt: null
+validation_split: null

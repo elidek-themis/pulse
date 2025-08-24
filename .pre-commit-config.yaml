@@ -1,6 +1,6 @@
 default_stages:
 - pre-commit
-exclude: .git|README.md|poetry.lock|.csv|.ipynb
+exclude: .git|README.md|uv.lock|.csv|.ipynb
 fail_fast: true
 repos:
 # Detect secrets

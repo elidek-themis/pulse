@@ -12,12 +12,12 @@ import streamlit as st
 
 from lm_eval import evaluate
 
-from utils.task import PulseResults, ReferendumConfig, PulseMultipleChoice
+from utils.task import PulseResults, PulseMultipleChoice, referendum_task
 from utils.vllm_connection import VLLMConnection
 
 # Session state setup start
 if "task_config" not in st.session_state:
-    st.session_state.task_config = ReferendumConfig()
+    st.session_state.task_config = referendum_task
 
 if "results" not in st.session_state:
     st.session_state.results = set()
@@ -235,8 +235,7 @@ def sidebar_connection() -> None:
 
 
 def prompt_container() -> None:
-    # st.write("#### Prompts")
-    # st.markdown("<div> Prompt </div>", unsafe_allow_html=True)
+    st.write("### Prompts")
 
     st.text_input(
         label="System prompt",
@@ -245,8 +244,6 @@ def prompt_container() -> None:
         args=("description",),
         key="description",
     )
-    with st.expander("Personas"):
-        batch_container()
     st.text_input(
         label="User prompt",
         placeholder="What is your opinion on {{ subject }}?",
@@ -264,13 +261,8 @@ def prompt_container() -> None:
 
 
 def completions_container() -> None:
-    selected_completions = st.selectbox(
-        label="Select completions",
-        options=st.session_state.completions.keys(),
-        index=None,
-        key="selected_completions",
-    )
-    new_c, edit_c, del_c = st.columns(3)
+    selected_completions = st.selectbox("Edit completions", st.session_state.completions.keys(), index=None)
+    new_c, edit_c, del_c = st.columns([0.33, 0.33, 0.33])
     with new_c:
         st.button("New", on_click=create_completions, key="new_completions", use_container_width=True)
     if selected_completions:
@@ -290,34 +282,34 @@ def completions_container() -> None:
                 key="delete_completions",
                 use_container_width=True,
             )
+    st.selectbox(
+        label="Select completions", options=st.session_state.completions.keys(), index=None, key="selected_completions"
+    )
 
 
 def batch_container() -> None:
-    selected_col, assign_col = st.columns(2)
-    with selected_col:
-        selected_persona = st.selectbox(
-            "Edit Persona File",
-            st.session_state.personas.keys(),
-            index=None,
-        )
-        new_c, edit_c, del_c = st.columns(3)
-        new_c.button(label="New", on_click=new_persona, key="new_persona", use_container_width=True)
-        if selected_persona:
-            edit_c.button(
+    selected_persona = st.selectbox("Edit Persona File", st.session_state.personas.keys(), index=None)
+    new_c, edit_c, del_c = st.columns([0.33, 0.33, 0.33])
+    with new_c:
+        st.button(label="New", on_click=new_persona, key="new_persona", use_container_width=True)
+    if selected_persona:
+        with edit_c:
+            st.button(
                 label="View/Edit",
                 on_click=edit_persona,
                 args=(selected_persona,),
                 key="edit_persona",
                 use_container_width=True,
             )
-            del_c.button(
+        with del_c:
+            st.button(
                 label="Delete",
                 on_click=delete_persona,
                 args=(selected_persona,),
                 key="delete_persona",
                 use_container_width=True,
             )
-    assign_col.multiselect(
+    st.multiselect(
         label="Select personas",
         options=st.session_state.personas.keys(),
         # on_change=setattr(st.session_state, "merged_docs", None),
@@ -363,11 +355,10 @@ def save() -> None:
         selected_personas = st.session_state.get("selected_personas", None)
         selected_completions = st.session_state.get("selected_completions", None)
         # GUARDS start
-        if not st.session_state.task:
-            st.toast("Please provide a name for the poll.")
-        # TODO: in task_manager
-        elif st.session_state.task in {result.task for result in st.session_state.results}:
-            st.toast(f"Task '{st.session_state.task}' already exists. Please choose a different name.")
+        if not st.session_state.name:
+            st.toast("Please provide a name for the dataset.")
+        elif st.session_state.name in {result.task for result in st.session_state.results}:
+            st.toast(f"Task '{st.session_state.name}' already exists. Please choose a different name.")
         elif not selected_completions:
             st.toast("Please select a completion set.")
         # GUARDS end
@@ -376,7 +367,6 @@ def save() -> None:
             completions = pd.DataFrame(completions).to_dict(orient="list")
 
             if selected_personas:
-                st.write(selected_personas)
                 docs = [st.session_state.personas[persona] for persona in selected_personas]
                 all_docs = list(product(*docs))  # cartesian product of input iterables
                 st.toast(f"{st.session_state.selected_personas} produced {len(all_docs)} documents.")
@@ -388,7 +378,7 @@ def save() -> None:
             else:
                 merged_docs = None
 
-            st.session_state.task_config.task = st.session_state.task
+            st.session_state.task_config.task = st.session_state.name
             st.session_state.task_config.dataset_kwargs.update({"docs": merged_docs})
             st.session_state.task_config.dataset_kwargs.update({"completions": completions})
 
@@ -398,70 +388,33 @@ with st.sidebar.expander("Connection", expanded=True):
     st.button("Config", on_click=show_config)
 
 st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
+st.subheader("Create a Poll")
 
-# name_col, _ = st.columns([0.4, 0.4])
+name_col, _ = st.columns([0.4, 0.4])
+with name_col:
+    st.text_input("Name", placeholder="e.g. referendum", key="name")
 
 task_col, batch_col = st.columns([0.4, 0.4])
-task_col.subheader("Create a Poll")
-with task_col.container(border=True, height=680):
-    st.text_input(
-        "Name",
-        placeholder="e.g. referendum",
-        on_change=update_task_config,
-        args=("task",),
-        key="task",
-    )
-    st.markdown("<div style='font-size:14px;'>Prompts</div>", unsafe_allow_html=True)
-    with st.container(border=True):
-        st.text_input(
-            label="System",
-            placeholder="You are {{ persona }}.",
-            on_change=update_task_config,
-            args=("description",),
-            key="description",
-        )
-        with st.expander("Batch personas"):
-            batch_container()
-        st.text_input(
-            label="User",
-            placeholder="What is your opinion on {{ subject }}?",
-            on_change=update_task_config,
-            args=("doc_to_text",),
-            key="doc_to_text",
-        )
-        st.text_input(
-            label="Assistant",
-            placeholder="I believe that",
-            on_change=update_task_config,
-            args=("gen_prefix",),
-            key="gen_prefix",
-        )
+with task_col.container(border=True, height=600):
+    prompt_container()
 
-    # with st.empty().container(border=True):
-    with st.expander("Completions", expanded=True):
+    with st.empty().container(border=True):
         completions_container()
 
-batch_col.subheader("Select Poll")
-with batch_col.container(border=True, height=680):
-    data = {
-        "Task Name": ["Task_1", "Task_2", "Task_3", "Task_4", "Task_5"],
-        "Hash": ["53737d94", "27c6f55c", "6e76ade5", "aa640488", "8f60a8bd"],
-        "Status": ["Low", "Low", "Done", "Done", "High"],
-    }
-    df = pd.DataFrame.from_dict(data)
-    st.dataframe(df)
-    # with st.empty().container(border=True):
-    #     batch_container()
+with batch_col.container(border=True, height=600):
+    st.write("### Batch Polling")
+    with st.empty().container(border=True):
+        batch_container()
 
 save_c, build_c, run_c = st.columns([0.33, 0.33, 0.33])
 
 with save_c:
     save()
-    st.write(st.session_state.task_config)
-    st.session_state.task_config.to_yaml()
 
-if build_c.button("Build 🛠️", use_container_width=True):
-    task_arguments()
+with build_c:
+    if st.button("Build 🛠️", use_container_width=True):
+        task_arguments()
 
-if run_c.button("Run 🏃", use_container_width=True):
-    run_task(name=st.session_state.task_config.task)
+with run_c:
+    if st.button("Run 🏃", use_container_width=True):
+        run_task(name=st.session_state.task_config.task)

@@ -45,12 +45,5 @@
             "b": "Trump",
             "alias": "lastname"
         }
-    ],
-    "test": [
-        {
-            "a": "a",
-            "b": "b",
-            "alias": "c"
-        }
     ]
 }

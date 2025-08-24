@@ -26,10 +26,16 @@ dependencies = [
     "ipykernel>=6.29.5",
     "lm-eval[vllm]>=0.4.9",
     "matplotlib>=3.10.3",
+    "openai>=1.90.0",
     "pandas>=2.3.0",
+    "prometheus-client>=0.22.1",
     "seaborn>=0.13.2",
     "st-pages>=1.0.1",
-    "streamlit==1.44.1",
+    "streamlit==1.48.0",
+    "streamlit-extras>=0.7.5",
+    "streamlit-flow-component>=1.6.1",
+    "transformers==4.55.0",
+    "vllm==0.10.0",
 ]
 
 [project.optional-dependencies]

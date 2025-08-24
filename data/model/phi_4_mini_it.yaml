@@ -1,0 +1,15 @@
+# VLLM_SERVER_DEV_MODE=1
+model: microsoft/Phi-4-mini-instruct
+host: localhost
+port: 8002
+gpu_memory_utilization: 0.6
+max_model_len: 1024
+max_num_seqs: 1
+max_num_batched_tokens: 1024
+max_logprobs: 128
+middleware: middleware.VLLMConfigMiddleware
+
+enable_force_include_usage: true
+enable_server_load_tracking: true
+enable-tokenizer-info-endpoint: true
+enable-sleep-mode: true

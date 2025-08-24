@@ -4,11 +4,16 @@ icon = ""
 is_section = true
 
 [[pages]]
+path = "pages/explorer.py"
+name = "Prompt Explorer"
+icon = ":white_medium_small_square:"
+
+[[pages]]
 path = "pages/referendum.py"
 name = "Referendum"
-icon = ""
+icon = ":white_medium_small_square:"
 
 [[pages]]
 path = "pages/results.py"
 name = "Experiments"
-icon = ""
+icon = ":white_medium_small_square:"

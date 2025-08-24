@@ -1,6 +1,11 @@
-from typing import Any
-from dataclasses import dataclass
+import json
+import hashlib
 
+from typing import Any
+from collections.abc import Callable
+from dataclasses import field, dataclass
+
+import yaml
 import numpy as np
 import pandas as pd
 import datasets
@@ -135,18 +140,48 @@ def norm_prob_diff(doc: dict[str, Any], results: list[str]) -> dict[str, dict[st
 
 
 def aggregation(arr):
+    print(type(arr))
     return arr
 
 
-referendum_task = TaskConfig(
-    dataset_name="",
-    dataset_path="",
-    custom_dataset=load_dataset,
-    dataset_kwargs={},
-    test_split="test",
-    doc_to_target=0,
-    doc_to_choice="{{ choices['a'] + choices['b'] }}",
-    output_type="multiple_choice",
-    process_results=norm_prob_diff,
-    metric_list=[{"metric": "norm_prob_diff", "aggregation": aggregation, "higher_is_better": True}],
-)
+class ReferendumConfig(TaskConfig):
+    # shared by all tasks
+    dataset_name: str = ""
+    dataset_path: str = ""
+    custom_dataset: Callable[..., Any] = load_dataset
+    test_split: str = "test"
+    doc_to_choice: str = "{{ choices['a'] + choices['b'] }}"
+    output_type: str = "multiple_choice"
+    process_results: Callable[..., Any] = norm_prob_diff
+    metric_list: list[dict[str, Any]] = [
+        {"metric": "norm_prob_diff", "aggregation": aggregation, "higher_is_better": True}
+    ]
+    # defined by the user from the UI
+    dataset_kwargs: dict[str, Any] = field(default_factory=dict)
+
+    def hash(self) -> str:
+        kwargs_str = json.dumps(self.dataset_kwargs, sort_keys=True)
+        raw_str = f"{self.description}|{self.doc_to_text}|{self.gen_prefix}|{kwargs_str}"
+
+        return hashlib.sha256(raw_str.encode("utf-8")).hexdigest()
+
+    def to_yaml(self):
+        with open("test.yaml", "w") as f:
+            yaml.safe_dump(self.__dict__, f)
+
+    def from_yaml(self):
+        pass
+
+
+# referendum_task = TaskConfig(
+#     dataset_name="",
+#     dataset_path="",
+#     custom_dataset=load_dataset,
+#     dataset_kwargs={},
+#     test_split="test",
+#     doc_to_target=0,
+#     doc_to_choice="{{ choices['a'] + choices['b'] }}",
+#     output_type="multiple_choice",
+#     process_results=norm_prob_diff,
+#     metric_list=[{"metric": "norm_prob_diff", "aggregation": aggregation, "higher_is_better": True}],
+# )
