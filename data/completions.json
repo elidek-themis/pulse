@@ -26,7 +26,7 @@
             "alias": "(conservative/liberal)"
         },
         {
-            "a": "the candidate of the Democratic",
+            "a": "the candidate of the Democrats",
             "b": "the candidate of the Republicans",
             "alias": "candidate of the (D/R)"
         },
@@ -51,6 +51,11 @@
             "a": "a",
             "b": "b",
             "alias": "c"
+        },
+        {
+            "a": "asdas",
+            "b": "asdasd",
+            "alias": "asdasd"
         }
     ]
 }

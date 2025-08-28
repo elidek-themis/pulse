@@ -5,7 +5,7 @@ is_section = true
 
 [[pages]]
 path = "pages/explorer.py"
-name = "Prompt Explorer"
+name = "Explorer"
 icon = ":white_medium_small_square:"
 
 [[pages]]

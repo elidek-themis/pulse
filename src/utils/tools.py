@@ -6,42 +6,12 @@ import pandas as pd
 
 
 class Placeholder(StrEnum):
-    n = "Number of output sequences to return for the given prompt."
-    presence_penalty = (
-        "Float that penalizes new tokens based on whether they appear in the generated text so far. "
-        "Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens."
-    )
-    frequency_penalty = (
-        "Float that penalizes new tokens based on their frequency in the generated text so far. "
-        "Values > 0 encourage the model to use new tokens, while values < 0 encourage the model to repeat tokens."
-    )
-    repetition_penalty = (
-        "Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far. "
-        "Values > 1 encourage the model to use new tokens, while values < 1 encourage the model to repeat tokens."
-    )
-    temperature = (
-        "Float that controls the randomness of the sampling. "
-        "Lower values make the model more deterministic, while higher values make the model more random. "
-        "Zero means greedy sampling."
-    )
-    top_p = (
-        "Float that controls the cumulative probability of the top tokens to consider. "
-        "Must be in (0, 1]. Set to 1 to consider all tokens."
-    )
-    top_k = "Integer that controls the number of top tokens to consider. Set to -1 to consider all tokens."
-    min_p = (
-        "Float that represents the minimum probability for a token to be considered, "
-        "relative to the probability of the most likely token. "
-        "Must be in [0, 1]. Set to 0 to disable this."
-    )
-    max_tokens = "Maximum number of tokens to generate per output sequence."
-    min_tokens = (
-        "Minimum number of tokens to generate per output sequence before EOS or stop_token_ids can be generated."
-    )
-    guided_regex = "If specified, the output will follow the regex pattern. Mind the leading whitespace!"
-    add_gen_prompt = (
-        "If true, the generation prompt will be added to the chat template. "
-        "This is a parameter used by chat template in tokenizer config of the model."
+    persona = "You are a citizen of the United States of America."
+    question = "What will you vote for in the 2024 U.S. presidential election?"
+    answer = "I will vote for"
+    gen_prompt = (
+        "Set if if you want to continue the last message. "
+        "Else, the assistant's role will be appended to the template."
     )
 
 
