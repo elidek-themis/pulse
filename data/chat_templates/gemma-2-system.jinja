@@ -1,0 +1,40 @@
+{{ bos_token }}
+
+{# Determine if there is a single leading system message #}
+{% set has_system = messages and messages[0]['role'] == 'system' %}
+
+{# Start iterating after optional system #}
+{% set start_idx = 1 if has_system else 0 %}
+{% set expected = 'user' %}
+
+{% for i in range(start_idx, messages|length) %}
+    {% set message = messages[i] %}
+
+    {% if message['role'] == 'system' %}
+        {{ raise_exception('Only a single leading system message is supported.') }}
+    {% endif %}
+
+    {% if message['role'] != expected %}
+        {{ raise_exception('Conversation roles must alternate user/assistant and start with user (after system).') }}
+    {% endif %}
+
+    {% set role = 'model' if message['role'] == 'assistant' else 'user' %}
+
+    {% if has_system and i == start_idx and message['role'] == 'user' %}
+        {% set combined = (messages[0]['content'] ~ '\n' ~ (message['content'] | trim)) %}
+    {% else %}
+        {% set combined = message['content'] | trim %}
+    {% endif %}
+
+<start_of_turn>{{ role }}
+{{ combined }}<end_of_turn>
+
+    {% set expected = 'assistant' if expected == 'user' else 'user' %}
+{% endfor %}
+
+{% if add_generation_prompt %}
+    {% if expected != 'assistant' %}
+        {{ raise_exception('add_generation_prompt requires the last message to be from user.') }}
+    {% endif %}
+<start_of_turn>model
+{% endif %}

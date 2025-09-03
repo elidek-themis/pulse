@@ -10,5 +10,6 @@ wheels/
 .venv
 
 # Development
+.vscode/
 .streamlit/secrets.toml
 prototyping.ipynb

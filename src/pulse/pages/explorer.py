@@ -9,9 +9,11 @@ import streamlit as st
 
 from streamlit import logger
 from streamlit import session_state as ss
+from streamlit.delta_generator import DeltaGenerator
 
-from utils.tools import Placeholder as ph
-from utils.vllm_connection import SampleRequest, VLLMConnection
+from pulse.utils.paths import COMPLETIONS
+from pulse.utils.tools import Placeholder as ph
+from pulse.connection.vllm_connection import SampleRequest, VLLMConnection
 
 _LOGGER: Final = logger.get_logger(__name__)
 
@@ -21,7 +23,7 @@ st.subheader("Explorer")
 if "vllm_conn" not in ss:
     ss.vllm_conn = None
 
-completions_path = Path("data") / "completions.json"
+completions_path = COMPLETIONS / "completions_json"
 if "completions" not in ss:
     ss.completions = json.load(open(completions_path))
 
@@ -35,6 +37,9 @@ if "credentials" not in ss:
     ss.credentials = {}
 
 # persist start
+if "selected_model" in st.session_state:
+    st.session_state.selected_model = st.session_state.selected_model
+
 if "description" in st.session_state:
     st.session_state.description = st.session_state.description
 
@@ -64,12 +69,12 @@ def sidebar_connection() -> None:
     with st.form("connection_form"):
         url = st.text_input(
             label="url",
-            value=ss.credentials.get("base_url", None),
+            value=ss.credentials.get("base_url"),
             placeholder="http://localhost:8000",
         )
         api_key = st.text_input(
             label="api_key",
-            value=ss.credentials.get("token", None),
+            value=ss.credentials.get("token"),
             placeholder="EMPTY",
             type="password",
         )
@@ -77,9 +82,9 @@ def sidebar_connection() -> None:
         if st.form_submit_button("Connect"):
             connect(url=url, api_key=api_key)
 
-    if ss.get("vllm_conn", None):
+    if ss.get("vllm_conn"):
         models = get_models()
-        index = models.index(ss.selected_model) if ss.get("selected_model", False) else None
+        index = models.index(ss.selected_model) if ss.get("selected_model") else None
 
         st.selectbox(
             label="Select a model",
@@ -182,7 +187,7 @@ def draw_completions() -> None:
     new_col, edit_col, del_col = st.columns(3)
     new_col.button("New", on_click=create_completions, use_container_width=True)
     # if a completion is selected, add view/edit & delete btns
-    if selected_completions := ss.get("selected_completions", None):
+    if selected_completions := ss.get("selected_completions"):
         edit_col.button(
             label="View/Edit", on_click=edit_completions, args=(selected_completions,), use_container_width=True
         )
@@ -191,6 +196,7 @@ def draw_completions() -> None:
         )
 
 
+@st.fragment()
 def prompt_container():
     st.text_input(label="Persona", placeholder=ph.persona, key="description")
     st.text_input(label="Question", placeholder=ph.question, key="doc_to_text")
@@ -200,10 +206,11 @@ def prompt_container():
 
 @st.fragment()
 def draw_params():
+    max_logprobs = ss.vllm_conn.max_logprobs
     st.number_input(
-        label="Number of log probabilities - max: 128000",
+        label=f"No. of log probs (max: {max_logprobs})",
         min_value=5,
-        max_value=100,
+        max_value=max_logprobs,
         value=10,
         step=1,
         key="logprobs",
@@ -242,17 +249,21 @@ def get_chat() -> str | None:
         return None
 
 
+@st.fragment()
 def sample() -> None:
     if chat := get_chat():
         request = SampleRequest(context=chat, continuation="")
         (prompt,) = ss.vllm_conn.sample(requests=[request], **ss.extra_body)
         ss.sample_df = pd.DataFrame(prompt.next_tokens).set_index("rank")
+        # (numRows + 1) * 35 + 3
     else:
         ss.sample_df = None
 
 
+@st.fragment()
 def rank() -> None:
     if not (chat := get_chat()):
+        ss.rankings = None
         return
 
     if not (completions := ss.get("selected_completions")):
@@ -261,14 +272,21 @@ def rank() -> None:
         return
 
     completions = st.session_state.completions[completions]
-    ss.rankings = pd.DataFrame(completions).to_dict(orient="list")
+    rankings = pd.DataFrame(completions).to_dict(orient="list")
+    choices = rankings["a"] + rankings["b"]
+    rank_requests = [SampleRequest(context=chat, continuation=f" {choice}") for choice in choices]
+    prompts = ss.vllm_conn.sample(rank_requests, **ss.extra_body)
+
+    conts = [prompt.continuation.data for prompt in prompts]
+    mid = len(conts) // 2
+    ss.rankings = tuple(map(pd.DataFrame, [conts[:mid], conts[mid:]]))
 
 
 if not ss.vllm_conn:
     st.warning("Enter vLLM server credentials.")
     st.stop()
 
-if not ss.get("selected_model", False):
+if not ss.get("selected_model"):
     st.warning("Select one of the available models.")
     st.stop()
 
@@ -282,24 +300,40 @@ prompt_col.markdown("<div> Prompt </div>", unsafe_allow_html=True)
 with prompt_col.container(border=True, height=420):
     prompt_container()
 
+
+def st_md(
+    text: str,
+    container: DeltaGenerator | None = None,
+    font_size: str = "16px",
+    **styles: str,
+) -> None:
+    styles = {"font-size": font_size, **styles}
+    style_str = "; ".join(f"{k}: {v}" for k, v in styles.items() if v is not None)
+
+    target = container if container is not None else st
+    target.markdown(
+        f"<div style='{style_str}'>{text}</div>",
+        unsafe_allow_html=True,
+    )
+
+
 with next_col:
-    st.markdown("<div> Next token </div>", unsafe_allow_html=True)
-    next_container = st.container(border=True, height=420)
-    next_container.write("a")
+    st_md("Next token")
+    next_container = next_col.container(border=True, height=420)
+    st.write("a")
     if "sample_df" in ss:
         next_container.dataframe(ss.sample_df, height=415)
 
-with params_col.container(border=False, height=430) as cont:
+with params_col.container(border=False, height=420) as cont:
     st.empty().container(border=False, height=100)
     draw_params()
-    # st.button("Sample 🕵️‍♂️👉", on_click=sample, use_container_width=True)
-    sample_label = "Sample next token👉"  # "Sample 🕵️‍♂️👉"
+    sample_label = "Sample next token 👉"  # "Sample 🕵️‍♂️👉"
     st.button(
         label="Sample next token👉",
         on_click=sample,
         use_container_width=True,
     )
-    rank_label = "Rank completions👇"  # "Rank 👇📊"
+    rank_label = "Rank completions 👇"  # "Rank 👇📊"
     st.button(
         "Rank completions👇",
         on_click=rank,
@@ -307,17 +341,8 @@ with params_col.container(border=False, height=430) as cont:
     )
 
 
-if ss.get("rankings", None):
-    choices = ss.rankings["a"] + ss.rankings["b"]
-    chat = get_chat()
-    rank_requests = [SampleRequest(context=chat, continuation=f" {choice}") for choice in choices]
-    prompts = ss.vllm_conn.sample(rank_requests, **ss.extra_body)
-
-    conts = [prompt.continuation for prompt in prompts]
-    no_choices = len(conts) // 2
-    conts_a = [cont.data for cont in conts[:no_choices]]
-    conts_b = [cont.data for cont in conts[no_choices:]]
-    side_a_col, side_b_col = st.columns(2)
-
-    side_a_col.dataframe(pd.DataFrame(conts_a), hide_index=True)
-    side_b_col.dataframe(pd.DataFrame(conts_b), hide_index=True)
+if rankings := ss.get("rankings"):
+    side_a, side_b = st.columns(2)
+    group_a, group_b = rankings
+    side_a.dataframe(group_a, hide_index=True)
+    side_b.dataframe(group_b, hide_index=True)

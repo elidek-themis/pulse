@@ -1,20 +1,15 @@
-from contextlib import contextmanager
 import math
 
 from typing import Final
 from operator import itemgetter
+from contextlib import contextmanager
 from dataclasses import field, dataclass
 
 import requests
 
-from tqdm import tqdm
-from openai import OpenAI
 from streamlit import logger
-from openai.resources.chat import Chat
 from streamlit.connections import BaseConnection
-from openai.resources.models import Models
 from lm_eval.models.api_models import TemplateAPI
-from openai.resources.completions import Completions
 
 _LOGGER: Final = logger.get_logger(__name__)
 
@@ -24,12 +19,6 @@ class Token:
     token: str
     logprob: float | None
     rank: int | None
-    prob: float = field(init=False)
-    is_greedy: bool = field(init=False)
-
-    def __post_init__(self):
-        self.prob: float | None = math.exp(self.logprob) if self.logprob else None
-        self.is_greedy: bool = self.rank == 1
 
 
 @dataclass
@@ -81,7 +70,7 @@ class SampleRequest:
 
 class VLLMConnection(BaseConnection):
     def _connect(self, seed=2025, **kwargs) -> "VLLMConnection":
-        """Searches for credentials in `kwargs` or `self._secrets`."""
+        """Searches for credentials in `kwargs` or `streamlit secrets`."""
 
         if "base_url" in kwargs:
             _LOGGER.info("Using base_url from kwargs.")
@@ -121,17 +110,27 @@ class VLLMConnection(BaseConnection):
             model=model,
             seed=self._seed,
         )
-
-    def health(self) -> requests.Response:
-        assert hasattr(self, "lm"), "No model has been assigned. Use `assign_model` first."
-        r = requests.get(f"{self._base_url}/health", headers=self.headers, json={"model": self.lm.model})
-        r.raise_for_status()
-        return r
+        self.max_logprobs = self._get_max_logprobs()
 
     def get_models(self) -> requests.Response:
-        r = requests.get(f"{self._base_url}/v1/models", headers=self.headers)
-        r.raise_for_status()
-        return r
+        resp = requests.get(f"{self._base_url}/v1/models", headers=self.headers)
+        resp.raise_for_status()
+        return resp
+
+    def get_model_config(self) -> requests.Response:
+        payload = {"model": self.lm.model}
+        resp = requests.get(f"{self._base_url}/model_config", json=payload, headers=self.headers)
+        if not resp.ok:
+            _LOGGER.warning(
+                "/model_config endpoint not enabled, serve with --middleware utils.CustomRouteMiddleware",
+            )
+        return resp
+
+    def _get_max_logprobs(self, vllm_default: int = 20) -> int:
+        resp = self.get_model_config()
+        model_config = resp.json()
+
+        return model_config.get("max_logprobs", vllm_default)
 
     def sample(self, requests: list[SampleRequest], **kwargs) -> list[Prompt]:
         return self.lm.sample(requests=requests, **kwargs)

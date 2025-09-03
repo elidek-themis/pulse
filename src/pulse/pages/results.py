@@ -1,9 +1,11 @@
 import pandas as pd
 import streamlit as st
 
-from utils.plot import lineplot
-from utils.task import PulseResults
-from utils.tools import styler
+from streamlit import session_state as ss
+
+from pulse.utils.plot import lineplot
+from pulse.utils.tools import styler
+from pulse.data.pulse_task import PulseResults
 
 
 def select(runs: pd.DataFrame) -> tuple:
@@ -14,91 +16,108 @@ def select(runs: pd.DataFrame) -> tuple:
     model_runs = runs[runs.model == model]
     task = st.selectbox("Select task", model_runs.task.sort_values())
 
-    if "task" not in st.session_state:
-        st.session_state.task = task
-    elif task != st.session_state.task:
-        st.session_state.task = task
-        st.session_state.pop("choices", None)
-        st.session_state.pop("columns", None)
-        st.session_state.pop("menu_df", None)
-        st.session_state.pop("ground_truth", None)
-        st.session_state.pop("selected_key", None)
+    if "task" not in ss:
+        ss.task = task
+    elif task != ss.task:
+        ss.task = task
+        ss.pop("choices", None)
+        ss.pop("columns", None)
+        ss.pop("menu_df", None)
+        ss.pop("ground_truth", None)
+        ss.pop("selected_key", None)
 
     return model, task
 
 
 def update_selection() -> None:
     """Updates session state variables"""
-    menu_df = st.session_state.menu_df
+    menu_df = ss.menu_df
 
-    selection = st.session_state.menu.selection.rows
+    selection = ss.menu.selection.rows
     selection = menu_df.index.difference(selection)
 
     A_choices = menu_df.loc[selection, "Group A"]
     B_choices = menu_df.loc[selection, "Group B"]
-    st.session_state.choices = {
+    ss.choices = {
         "Group A": A_choices.to_list(),
         "Group B": B_choices.to_list(),
     }
-    st.session_state.columns = menu_df.loc[selection, "Alias"].to_list()
+    ss.columns = menu_df.loc[selection, "Alias"].to_list()
 
 
 def task_summary(results) -> None:
     st.write("Menu")
-    choices = results.choices
-    if "choices" not in st.session_state:
-        st.session_state.choices = {
-            "Group A": choices["a"],
-            "Group B": choices["b"],
+    choices = results.choices.item()
+
+    if "choices" not in ss:
+        ss.choices = {
+            "Group A": choices["A"],
+            "Group B": choices["B"],
         }
 
-    if "columns" not in st.session_state:
-        st.session_state.columns = choices["alias"]
+    if "columns" not in ss:
+        ss.columns = choices["alias"]
 
     menu_df = pd.DataFrame(
         {
-            "Group A": choices["a"],
-            "Group B": choices["b"],
             "Alias": choices["alias"],
+            "Group A": choices["A"],
+            "Group B": choices["B"],
         }
     )
 
-    if "menu_df" not in st.session_state:
-        st.session_state.menu_df = menu_df
+    if "menu_df" not in ss:
+        ss.menu_df = menu_df
 
-    st.dataframe(
-        data=menu_df,
-        hide_index=True,
-        key="menu",
-        on_select=update_selection,
-    )
+    st.multiselect(label="Multi-select example", options=choices["alias"], default=choices["alias"])
+
+    with st.expander("", expanded=True):
+        st.dataframe(
+            data=menu_df,
+            hide_index=True,
+            key="menu",
+            on_select=update_selection,
+        )
     update_selection()
 
 
-def get_runs_df() -> pd.DataFrame:
-    data = [(e.model, e.task, e) for e in st.session_state.results]
-    return pd.DataFrame(data, columns=("model", "task", "output"))
+def diff_section(results) -> pd.DataFrame:
+    docs = results.docs.item()
+    metrics = results.metrics.item()
 
+    key = ss.selected_key
+    index = [doc[key] for doc in docs] if results.docs.any() else [key]
 
-def diff_section(results: PulseResults) -> pd.DataFrame:
-    diff = pd.DataFrame(results.metrics)
-
-    key = st.session_state.selected_key
-    index = results.values(key) if results.docs else [key]
+    diff = pd.DataFrame(metrics)
     diff.index = index
 
-    diff = diff[st.session_state.columns]
+    diff = diff[ss.columns]
+    cols = diff.columns
+
     diff["mean"] = diff.mean(axis=1)
     diff["se"] = diff.std(axis=1) / diff.count(axis=1).apply(lambda x: x**0.5)
 
     with st.expander("Normalized Probability Differences", expanded=True):
-        subset = diff.columns.drop(["se"])
-        st.dataframe(
+        diff_col, agg_col = st.columns((0.8, 0.2))
+
+        diff_col.write("Detailed Differences")
+        diff_col.dataframe(
             data=styler(
-                diff.reset_index(),
-                subset=subset,
-                a_color=st.session_state.group_a_color,
-                b_color=st.session_state.group_b_color,
+                diff.drop(["mean", "se"], axis=1).reset_index(),
+                subset=cols,
+                a_color=ss.group_a_color,
+                b_color=ss.group_b_color,
+            ),
+            hide_index=True,
+        )
+
+        agg_col.write("Aggregated prediction signal")
+        agg_col.dataframe(
+            data=styler(
+                diff[["mean", "se"]],
+                subset=["mean"],
+                a_color=ss.group_a_color,
+                b_color=ss.group_b_color,
             ),
             hide_index=True,
         )
@@ -106,30 +125,34 @@ def diff_section(results: PulseResults) -> pd.DataFrame:
     return diff
 
 
-def set_ground_truth(results: PulseResults) -> None:
-    if not st.session_state.get("pct_a", None):
+def set_ground_truth(results) -> None:
+    docs = results.docs.item()
+
+    if not ss.get("pct_a", None):
         st.toast("pct_a is not set")
-        st.session_state.ground_truth = None
+        ss.ground_truth = None
         return
 
-    if not st.session_state.get("pct_b", None):
+    if not ss.get("pct_b", None):
         st.toast("pct_b is not set")
-        st.session_state.ground_truth = None
+        ss.ground_truth = None
         return
 
-    pct_a = results.values(st.session_state.pct_a)
-    pct_b = results.values(st.session_state.pct_b)
+    # pct_a = results.values(ss.pct_a)
+    pct_a = [doc[ss.pct_a] for doc in docs]
+    pct_b = [doc[ss.pct_b] for doc in docs]
 
-    st.session_state.ground_truth = [a / (a + b) - b / (a + b) for a, b in zip(pct_a, pct_b)]
+    ss.ground_truth = [a / (a + b) - b / (a + b) for a, b in zip(pct_a, pct_b)]
 
 
-def setup_sidebar(results: PulseResults) -> None:
+def setup_sidebar(results) -> None:
     with st.sidebar:
         st.divider()
 
-        samples = results.samples.drop("choices", axis=1)
-        string_columns = samples.select_dtypes(include="object").columns
-        numerical_columns = samples.select_dtypes(exclude="object").columns
+        string_columns = results.num.item()
+        numerical_columns = results.alpha_num.item()
+        # string_columns = samples.select_dtypes(include="object").columns
+        # numerical_columns = samples.select_dtypes(exclude="object").columns
 
         color_col, a_col, b_col = st.columns([0.4, 0.3, 0.3])
         with color_col:
@@ -156,11 +179,11 @@ def setup_sidebar(results: PulseResults) -> None:
                 key="fig_y",
             )
 
-        if results.docs:
+        if results.docs.any():
             st.selectbox("key", options=string_columns, key="selected_key")
         else:
-            st.session_state.selected_key = results.system_prompt
-            st.write(f"Key: {st.session_state.selected_key}")
+            ss.selected_key = results.system_prompt
+            st.write(f"Key: {ss.selected_key}")
 
         with st.empty().container(border=True):
             st.write("Ground Truth")
@@ -191,8 +214,8 @@ def setup_sidebar(results: PulseResults) -> None:
 
 
 def lineplot_section(diff: pd.DataFrame) -> None:
-    if st.session_state.get("ground_truth", None):
-        diff["pct_diff"] = st.session_state.ground_truth
+    if ss.get("ground_truth", None):
+        diff["pct_diff"] = ss.ground_truth
         id_vars = ["index", "pct_diff", "mean"]
     else:
         id_vars = ["index", "mean"]
@@ -202,9 +225,9 @@ def lineplot_section(diff: pd.DataFrame) -> None:
 
     fig = lineplot(
         diff=diff,
-        figsize=(st.session_state.fig_x, st.session_state.fig_y),
-        group_a_color=st.session_state.group_a_color,
-        group_b_color=st.session_state.group_b_color,
+        figsize=(ss.fig_x, ss.fig_y),
+        group_a_color=ss.group_a_color,
+        group_b_color=ss.group_b_color,
     )
 
     _, pointplot_col, _ = st.columns([0.2, 0.35, 0.2])
@@ -213,7 +236,7 @@ def lineplot_section(diff: pd.DataFrame) -> None:
 
 
 st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
-runs = get_runs_df()
+runs = ss.repo.runs
 
 with st.sidebar:
     st.write("Repository")
@@ -223,12 +246,11 @@ if runs.empty:  # guard
     st.warning("No experiments found.")
     st.stop()
 
-st.subheader(f"{st.session_state.task} results")
+st.subheader(f"{ss.task} results")
 
 run = runs[(runs.model == model) & (runs.task == task)]
-results = run.output.item()
 
-task_summary(results=results)  # menu container
-setup_sidebar(results=results)  # sidebar options
-diff = diff_section(results=results)  # data container
+task_summary(results=run)  # menu container
+setup_sidebar(results=run)  # sidebar options
+diff = diff_section(results=run)  # data container
 lineplot_section(diff=diff)  # plot container

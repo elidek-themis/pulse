@@ -1,0 +1,215 @@
+{
+  "task": "CNN demo",
+  "model": "lunahr/SystemGemma2-27b-it",
+  "metrics": [
+    {
+      "(D/R)": 0.7680785634920665,
+      "(D/R) party": 0.8476114764384949,
+      "(D/R) candidate": 0.8290554358264528,
+      "(D/R) nominee": 0.8084740744816098,
+      "(conservative/liberal)": -0.3867890191503611,
+      "candidate of the (D/R)": 0.7481544703297355,
+      "candidate of the (D/R) party": 0.853699906675385,
+      "fullname": 0.23687589592286562,
+      "lastname": 0.8298019099859595
+    },
+    {
+      "(D/R)": 0.8369604880505621,
+      "(D/R) party": 0.8910305928263152,
+      "(D/R) candidate": 0.8622127954914893,
+      "(D/R) nominee": 0.8774108421299979,
+      "(conservative/liberal)": -0.36469184953467254,
+      "candidate of the (D/R)": 0.8866951493840524,
+      "candidate of the (D/R) party": 0.9447646417847688,
+      "fullname": 0.20890891505273163,
+      "lastname": 0.839285062355586
+    },
+    {
+      "(D/R)": 0.7481544703297354,
+      "(D/R) party": 0.8478593958885708,
+      "(D/R) candidate": 0.8193179065361593,
+      "(D/R) nominee": 0.7738036016141256,
+      "(conservative/liberal)": -0.27461770527164636,
+      "candidate of the (D/R)": 0.761594055826061,
+      "candidate of the (D/R) party": 0.8160066270688362,
+      "fullname": 0.32206755765012335,
+      "lastname": 0.80384135305908
+    },
+    {
+      "(D/R)": 0.80384135305908,
+      "(D/R) party": 0.8615721143453529,
+      "(D/R) candidate": 0.8694114105819255,
+      "(D/R) nominee": 0.9083770903908945,
+      "(conservative/liberal)": -0.45921095434487536,
+      "candidate of the (D/R)": 0.9275598882700505,
+      "candidate of the (D/R) party": 0.9655874101529456,
+      "fullname": 0.14929140214292275,
+      "lastname": 0.7982427545398869
+    },
+    {
+      "(D/R)": 0.4743163252573668,
+      "(D/R) party": 0.5670249058510958,
+      "(D/R) candidate": 0.4265133250200857,
+      "(D/R) nominee": 0.31908396638707454,
+      "(conservative/liberal)": -0.7416927209498443,
+      "candidate of the (D/R)": 0.38528416929628845,
+      "candidate of the (D/R) party": -0.01056840409618931,
+      "fullname": -0.47502363027995426,
+      "lastname": 0.4863360172249623
+    },
+    {
+      "(D/R)": 0.7925027462672406,
+      "(D/R) party": 0.8339946097986615,
+      "(D/R) candidate": 0.8520579076252067,
+      "(D/R) nominee": 0.8520578994594499,
+      "(conservative/liberal)": -0.28273408266783856,
+      "candidate of the (D/R)": 0.9297102748596096,
+      "candidate of the (D/R) party": 0.9630840492407649,
+      "fullname": 0.26797314188426136,
+      "lastname": 0.8346053146499223
+    },
+    {
+      "(D/R)": 0.7805884522440585,
+      "(D/R) party": 0.8391253955994199,
+      "(D/R) candidate": 0.8481321456567577,
+      "(D/R) nominee": 0.8647705189021008,
+      "(conservative/liberal)": -0.2053105271629625,
+      "candidate of the (D/R)": 0.856817601110895,
+      "candidate of the (D/R) party": 0.9133118524467306,
+      "fullname": 0.3242313747977317,
+      "lastname": 0.8438436697100982
+    },
+    {
+      "(D/R)": 0.8065884134077568,
+      "(D/R) party": 0.9029554362635348,
+      "(D/R) candidate": 0.8696755627364008,
+      "(D/R) nominee": 0.8696755445819859,
+      "(conservative/liberal)": -0.35874413214586165,
+      "candidate of the (D/R)": 0.8725700114960693,
+      "candidate of the (D/R) party": 0.925394974710807,
+      "fullname": 0.2944941643338415,
+      "lastname": 0.8687903250818614
+    },
+    {
+      "(D/R)": 0.7680785634920665,
+      "(D/R) party": 0.8782568076948638,
+      "(D/R) candidate": 0.8372314100824311,
+      "(D/R) nominee": 0.8175362564447897,
+      "(conservative/liberal)": -0.3909457638462523,
+      "candidate of the (D/R)": 0.8093009879397789,
+      "candidate of the (D/R) party": 0.8711665443171582,
+      "fullname": 0.4040135249712651,
+      "lastname": 0.8833083187766378
+    },
+    {
+      "(D/R)": 0.7411945368167219,
+      "(D/R) party": 0.7477412915614479,
+      "(D/R) candidate": 0.8480204437644842,
+      "(D/R) nominee": 0.8480204353941642,
+      "(conservative/liberal)": -0.41116158903304667,
+      "candidate of the (D/R)": 0.9132684420355535,
+      "candidate of the (D/R) party": 0.9629924163609898,
+      "fullname": 0.3542632276316406,
+      "lastname": 0.8298019099859595
+    },
+    {
+      "(D/R)": 0.6794679353444786,
+      "(D/R) party": 0.8144268133515353,
+      "(D/R) candidate": 0.7547009393923407,
+      "(D/R) nominee": 0.7265060570864765,
+      "(conservative/liberal)": -0.4919886291108783,
+      "candidate of the (D/R)": 0.6709670742068736,
+      "candidate of the (D/R) party": 0.7365891709345251,
+      "fullname": 0.5263847725563157,
+      "lastname": 0.8482836399575129
+    },
+    {
+      "(D/R)": 0.6877902051090852,
+      "(D/R) party": 0.7789578660124058,
+      "(D/R) candidate": 0.6599442686116153,
+      "(D/R) nominee": 0.6599443022568601,
+      "(conservative/liberal)": -0.7070568634521173,
+      "candidate of the (D/R)": 0.7615941559557649,
+      "candidate of the (D/R) party": 0.7921949897434284,
+      "fullname": 0.1130938290710683,
+      "lastname": 0.7805884522440585
+    },
+    {
+      "(D/R)": 0.8298019099859596,
+      "(D/R) party": 0.8620866687005636,
+      "(D/R) candidate": 0.8698988182652952,
+      "(D/R) nominee": 0.8359772544905033,
+      "(conservative/liberal)": -0.42494554946406565,
+      "candidate of the (D/R)": 0.9051482536448665,
+      "candidate of the (D/R) party": 0.9425982405706904,
+      "fullname": 0.2660781576257714,
+      "lastname": 0.8248723209538827
+    },
+    {
+      "(D/R)": 0.8609165109883439,
+      "(D/R) party": 0.8382566366819912,
+      "(D/R) candidate": 0.8640300125041869,
+      "(D/R) nominee": 0.7852927126924292,
+      "(conservative/liberal)": -0.5211234335995141,
+      "candidate of the (D/R)": 0.9580715379376592,
+      "candidate of the (D/R) party": 0.9825370549167084,
+      "fullname": 0.4294632358426815,
+      "lastname": 0.852607460587903
+    },
+    {
+      "(D/R)": 0.7982427545398869,
+      "(D/R) party": 0.8193861524899024,
+      "(D/R) candidate": 0.7861213986897486,
+      "(D/R) nominee": 0.7610462033278835,
+      "(conservative/liberal)": -0.5522693968998664,
+      "candidate of the (D/R)": 0.8931933404003516,
+      "candidate of the (D/R) party": 0.9373477280983392,
+      "fullname": 0.34882736444135737,
+      "lastname": 0.8482836399575129
+    },
+    {
+      "(D/R)": 0.6397866718270722,
+      "(D/R) party": 0.6455787623573717,
+      "(D/R) candidate": 0.5667219483852094,
+      "(D/R) nominee": 0.5667219281546108,
+      "(conservative/liberal)": -0.7067582842404321,
+      "candidate of the (D/R)": 0.7340715196043415,
+      "candidate of the (D/R) party": 0.7295807108835581,
+      "fullname": 0.1431665302696588,
+      "lastname": 0.798242754539887
+    },
+    {
+      "(D/R)": 0.8649067378533973,
+      "(D/R) party": 0.8584532928838929,
+      "(D/R) candidate": 0.8880101107778466,
+      "(D/R) nominee": 0.8218318649297941,
+      "(conservative/liberal)": -0.3144676008439176,
+      "candidate of the (D/R)": 0.9480852614921068,
+      "candidate of the (D/R) party": 0.9759536893746629,
+      "fullname": 0.4053948469303645,
+      "lastname": 0.8649066177207418
+    },
+    {
+      "(D/R)": 0.7925027462672405,
+      "(D/R) party": 0.76130883910725,
+      "(D/R) candidate": 0.8090666798737429,
+      "(D/R) nominee": 0.7337582977133543,
+      "(conservative/liberal)": -0.5273401320394236,
+      "candidate of the (D/R)": 0.9051482536448665,
+      "candidate of the (D/R) party": 0.935534771166568,
+      "fullname": 0.2353638687881996,
+      "lastname": 0.8198140120760964
+    },
+    {
+      "(D/R)": 0.6397866718270722,
+      "(D/R) party": 0.6540775231518592,
+      "(D/R) candidate": 0.5971088715388553,
+      "(D/R) nominee": 0.6358297741572267,
+      "(conservative/liberal)": -0.7555861811437788,
+      "candidate of the (D/R)": 0.7193275010198336,
+      "candidate of the (D/R) party": 0.6973056849375299,
+      "fullname": 0.04958435684713819,
+      "lastname": 0.7117022939345188
+    }
+  ]
+}

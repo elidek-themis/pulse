@@ -1,12 +1,13 @@
-model: meta-llama/Llama-3.1-8B-Instruct
-# served_model_name: Llama 3.1 8B Instruct
+model: google/gemma-2-27b-it
+# served_model_name: Gemma 2 27b it
+# chat_template: ./data/chat_templates/gemma-2-system.jinja
 host: localhost
-port: 8001
-gpu_memory_utilization: 0.2
+port: 8003
+gpu_memory_utilization: 0.4
 max_model_len: 1024
 max_num_seqs: 1
 max_num_batched_tokens: 1024
-max_logprobs: 128000
+max_logprobs: 256000
 middleware: connection.CustomRouteMiddleware
 
 enable_force_include_usage: true

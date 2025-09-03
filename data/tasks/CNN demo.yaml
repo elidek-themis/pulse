@@ -1,0 +1,139 @@
+task: CNN demo
+description: You are {{ persona }}.
+doc_to_text: What will you vote in the 2024 U.S. presidential election?
+gen_prefix: I will vote for
+dataset_kwargs:
+  docs:
+  - demographic: Gender
+    group: Men
+    persona: a male voter
+    blue_pct: 43
+    red_pct: 55
+  - demographic: Gender
+    group: Women
+    persona: a female voter
+    blue_pct: 53
+    red_pct: 45
+  - demographic: Race/ethnicity
+    group: White
+    persona: a white voter
+    blue_pct: 42
+    red_pct: 57
+  - demographic: Race/ethnicity
+    group: Colored
+    persona: a voter of color
+    blue_pct: 64
+    red_pct: 33
+  - demographic: Religion
+    group: Christian
+    persona: a Christian voter
+    blue_pct: 37
+    red_pct: 62
+  - demographic: Religion
+    group: Jewish
+    persona: a Jewish voter
+    blue_pct: 78
+    red_pct: 22
+  - demographic: Religion
+    group: Non-religious
+    persona: a non-religious voter
+    blue_pct: 71
+    red_pct: 27
+  - demographic: Age
+    group: 18-44 years old
+    persona: a voter of age 18-44
+    blue_pct: 52
+    red_pct: 45
+  - demographic: Age
+    group: 45+
+    persona: a voter of age 45 or older
+    blue_pct: 46
+    red_pct: 52
+  - demographic: LGBT
+    group: Yes LGBT
+    persona: an LGBT voter
+    blue_pct: 86
+    red_pct: 12
+  - demographic: LGBT
+    group: No LGBT
+    persona: a non-LGBT voter
+    blue_pct: 45
+    red_pct: 53
+  - demographic: Education
+    group: No college degree
+    persona: a voter without a college degree
+    blue_pct: 43
+    red_pct: 56
+  - demographic: Education
+    group: College graduate
+    persona: a voter with a college degree
+    blue_pct: 56
+    red_pct: 42
+  - demographic: Income
+    group: Under $50,000
+    persona: a voter with income under $50,000
+    blue_pct: 48
+    red_pct: 50
+  - demographic: Income
+    group: $50,000-$99,999
+    persona: a voter with income between $50,000 and $99,999
+    blue_pct: 46
+    red_pct: 52
+  - demographic: Income
+    group: Over $100,000
+    persona: a voter with income over $100,000
+    blue_pct: 51
+    red_pct: 47
+  - demographic: Area
+    group: Urban
+    persona: a voter living in an urban area
+    blue_pct: 60
+    red_pct: 38
+  - demographic: Area
+    group: Suburban
+    persona: a voter living in a suburban area
+    blue_pct: 47
+    red_pct: 51
+  - demographic: Area
+    group: Rural
+    persona: a voter living in a rural area
+    blue_pct: 34
+    red_pct: 64
+  completions:
+    A:
+    - the Democrats
+    - the Democratic party
+    - the Democratic candidate
+    - the Democratic nominee
+    - the liberal candidate
+    - the candidate of the Democrats
+    - the candidate of the Democratic party
+    - Joe Biden
+    - Biden
+    B:
+    - the Republicans
+    - the Republican party
+    - the Republican candidate
+    - the Republican nominee
+    - the conservative candidate
+    - the candidate of the Republicans
+    - the candidate of the Republican party
+    - Donald Trump
+    - Trump
+    alias:
+    - (D/R)
+    - (D/R) party
+    - (D/R) candidate
+    - (D/R) nominee
+    - (conservative/liberal)
+    - candidate of the (D/R)
+    - candidate of the (D/R) party
+    - fullname
+    - lastname
+num:
+- demographic
+- group
+- persona
+alpha_num:
+- blue_pct
+- red_pct

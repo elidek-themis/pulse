@@ -1,0 +1,215 @@
+{
+  "task": "CNN demo",
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "metrics": [
+    {
+      "(D/R)": -0.031239831446031263,
+      "(D/R) party": -0.2858863254602502,
+      "(D/R) candidate": -0.2275276786674515,
+      "(D/R) nominee": 0.20305734148649335,
+      "(conservative/liberal)": -0.7261911066268784,
+      "candidate of the (D/R)": 0.12435300177159625,
+      "candidate of the (D/R) party": -0.08375989190772853,
+      "fullname": -0.011839745029569082,
+      "lastname": 0.4863360172249623
+    },
+    {
+      "(D/R)": 0.976625495024182,
+      "(D/R) party": 0.9684849170775158,
+      "(D/R) candidate": 0.9684849216996296,
+      "(D/R) nominee": 0.9896584982032091,
+      "(conservative/liberal)": 0.8899296246285578,
+      "candidate of the (D/R)": 0.9480853097166948,
+      "candidate of the (D/R) party": 0.9324468118079019,
+      "fullname": 0.9734074684986462,
+      "lastname": 0.979343704709352
+    },
+    {
+      "(D/R)": -0.5963735554792424,
+      "(D/R) party": -0.809188691283472,
+      "(D/R) candidate": -0.7614573824430287,
+      "(D/R) nominee": -0.5543742159896908,
+      "(conservative/liberal)": -0.9606687259403416,
+      "candidate of the (D/R)": -0.5963735554792422,
+      "candidate of the (D/R) party": -0.748737287489851,
+      "fullname": -0.08956112974301733,
+      "lastname": 0.06241874674751252
+    },
+    {
+      "(D/R)": 0.9878048756148494,
+      "(D/R) party": 0.9854236837640161,
+      "(D/R) candidate": 0.9871254220483197,
+      "(D/R) nominee": 0.9967290643490296,
+      "(conservative/liberal)": 0.958747645309195,
+      "candidate of the (D/R)": 0.9853083538051091,
+      "candidate of the (D/R) party": 0.9833466685698022,
+      "fullname": 0.9906686557989686,
+      "lastname": 0.9923510327107257
+    },
+    {
+      "(D/R)": -0.5758623912857893,
+      "(D/R) party": -0.9445515033807499,
+      "(D/R) candidate": -0.9203279228550812,
+      "(D/R) nominee": -0.8719520259859539,
+      "(conservative/liberal)": -0.999186090621625,
+      "candidate of the (D/R)": -0.7982427545398869,
+      "candidate of the (D/R) party": -0.9542608341718355,
+      "fullname": -0.8344992283834562,
+      "lastname": -0.6534237247641393
+    },
+    {
+      "(D/R)": 0.9805830470370519,
+      "(D/R) party": 0.9791703967547378,
+      "(D/R) candidate": 0.9733331431857047,
+      "(D/R) nominee": 0.9887964900303247,
+      "(conservative/liberal)": 0.9416637681247223,
+      "candidate of the (D/R)": 0.9895597436605695,
+      "candidate of the (D/R) party": 0.9869962680600923,
+      "fullname": 0.9603676243692962,
+      "lastname": 0.9780261147388136
+    },
+    {
+      "(D/R)": 0.9580715183637449,
+      "(D/R) party": 0.9579286946460697,
+      "(D/R) candidate": 0.9463002156999214,
+      "(D/R) nominee": 0.9799038733209403,
+      "(conservative/liberal)": 0.8426293235082142,
+      "candidate of the (D/R)": 0.9079321952015192,
+      "candidate of the (D/R) party": 0.9065956407911667,
+      "fullname": 0.9436233601005075,
+      "lastname": 0.9848455246357422
+    },
+    {
+      "(D/R)": 0.970992840617236,
+      "(D/R) party": 0.9706423123490603,
+      "(D/R) candidate": 0.9706423123490602,
+      "(D/R) nominee": 0.9890987598571656,
+      "(conservative/liberal)": 0.9182787757858791,
+      "candidate of the (D/R)": 0.9540452815893701,
+      "candidate of the (D/R) party": 0.9338498824772891,
+      "fullname": 0.9258840818041895,
+      "lastname": 0.9735543564953897
+    },
+    {
+      "(D/R)": -0.062418746747512466,
+      "(D/R) party": -0.40529855011511806,
+      "(D/R) candidate": -0.2958567558564722,
+      "(D/R) nominee": 0.13175676531081787,
+      "(conservative/liberal)": -0.892413892834907,
+      "candidate of the (D/R)": 0.062418746747512466,
+      "candidate of the (D/R) party": -0.19709008187520904,
+      "fullname": 0.20970818633478144,
+      "lastname": 0.330821117493628
+    },
+    {
+      "(D/R)": 0.9957685931988138,
+      "(D/R) party": 0.9979313128774219,
+      "(D/R) candidate": 0.9971735122566557,
+      "(D/R) nominee": 0.9995923126999209,
+      "(conservative/liberal)": 0.9806310169240801,
+      "candidate of the (D/R)": 0.9986242976898896,
+      "candidate of the (D/R) party": 0.9989603914572766,
+      "fullname": 0.9951758679541305,
+      "lastname": 0.9942208407122085
+    },
+    {
+      "(D/R)": -0.24491866240370913,
+      "(D/R) party": -0.5904538879524426,
+      "(D/R) candidate": -0.5482407486654421,
+      "(D/R) nominee": -0.23631035308741505,
+      "(conservative/liberal)": -0.9707890113231312,
+      "candidate of the (D/R)": -0.358357398350786,
+      "candidate of the (D/R) party": -0.5324822412980457,
+      "fullname": 0.3544631632099222,
+      "lastname": 0.5758623912857893
+    },
+    {
+      "(D/R)": 0.5545997223493824,
+      "(D/R) party": 0.08097452127376042,
+      "(D/R) candidate": 0.08097452127376037,
+      "(D/R) nominee": 0.5673811633739658,
+      "(conservative/liberal)": -0.8537942554789695,
+      "candidate of the (D/R)": 0.6351489523872873,
+      "candidate of the (D/R) party": 0.42160233401429437,
+      "fullname": -0.09465192802101502,
+      "lastname": 0.0
+    },
+    {
+      "(D/R)": 0.971872745913509,
+      "(D/R) party": 0.970833016730579,
+      "(D/R) candidate": 0.9670135272432316,
+      "(D/R) nominee": 0.9861156562723785,
+      "(conservative/liberal)": 0.9029362818061659,
+      "candidate of the (D/R)": 0.9297102748596096,
+      "candidate of the (D/R) party": 0.8952380067098662,
+      "fullname": 0.9535256520626106,
+      "lastname": 0.9817487165981704
+    },
+    {
+      "(D/R)": 0.9960244496833106,
+      "(D/R) party": 0.9941575819649179,
+      "(D/R) candidate": 0.9954469787785848,
+      "(D/R) nominee": 0.9980994951942005,
+      "(conservative/liberal)": 0.9370320352812396,
+      "candidate of the (D/R)": 0.9985356374766783,
+      "candidate of the (D/R) party": 0.9984872436417743,
+      "fullname": 0.9674548205454199,
+      "lastname": 0.9751366982936283
+    },
+    {
+      "(D/R)": 0.9793436949613896,
+      "(D/R) party": 0.9730548533403063,
+      "(D/R) candidate": 0.9730548541325152,
+      "(D/R) nominee": 0.9911718653002604,
+      "(conservative/liberal)": 0.7998617987657967,
+      "candidate of the (D/R)": 0.9805830470370518,
+      "candidate of the (D/R) party": 0.9763446009645429,
+      "fullname": 0.9617689302203201,
+      "lastname": 0.9617519264982223
+    },
+    {
+      "(D/R)": 0.35835760615162743,
+      "(D/R) party": 0.03019439973758392,
+      "(D/R) candidate": 0.03019434018728062,
+      "(D/R) nominee": 0.4855366934919912,
+      "(conservative/liberal)": -0.34950857904823357,
+      "candidate of the (D/R)": 0.15499073037162342,
+      "candidate of the (D/R) party": -0.13428383937014637,
+      "fullname": 0.7895553143929648,
+      "lastname": 0.7982427545398869
+    },
+    {
+      "(D/R)": 0.9978025378541507,
+      "(D/R) party": 0.9979671977188929,
+      "(D/R) candidate": 0.9976968445195443,
+      "(D/R) nominee": 0.9991520993830074,
+      "(conservative/liberal)": 0.9877805684531192,
+      "candidate of the (D/R)": 0.9947366545533852,
+      "candidate of the (D/R) party": 0.9919024335577474,
+      "fullname": 0.9870939766086311,
+      "lastname": 0.9928127948371599
+    },
+    {
+      "(D/R)": 0.6534234515185118,
+      "(D/R) party": 0.4205612476694548,
+      "(D/R) candidate": 0.5178326008617835,
+      "(D/R) nominee": 0.7661231361357388,
+      "(conservative/liberal)": -0.0993168811647725,
+      "candidate of the (D/R)": 0.4863360172249623,
+      "candidate of the (D/R) party": 0.3088223708132314,
+      "fullname": 0.7309569330867349,
+      "lastname": 0.8725700114960694
+    },
+    {
+      "(D/R)": -0.8392850623555859,
+      "(D/R) party": -0.9544345449820641,
+      "(D/R) candidate": -0.9485237261347167,
+      "(D/R) nominee": -0.8659992185849651,
+      "(conservative/liberal)": -0.9964552471329067,
+      "candidate of the (D/R)": -0.8093011524637514,
+      "candidate of the (D/R) party": -0.9171871414084491,
+      "fullname": -0.6386195300337304,
+      "lastname": -0.6709670742068737
+    }
+  ]
+}
