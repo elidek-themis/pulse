@@ -30,7 +30,7 @@ class Repository:
 
     @property
     def runs(self) -> pd.DataFrame:
-        cols = ["task", "model", "metrics", "docs", "choices", "num", "alpha_num"]
+        cols = ["task", "model", "metrics", "docs", "choices"]
 
         data = []
         for result in self.results:
@@ -43,8 +43,6 @@ class Repository:
                     result.metrics,
                     dataset_kwargs["docs"],
                     dataset_kwargs["completions"],
-                    task.num,
-                    task.alpha_num,
                 )
             )
 

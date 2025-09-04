@@ -4,12 +4,9 @@ host: localhost
 port: 8001
 gpu_memory_utilization: 0.2
 max_model_len: 1024
-max_num_seqs: 1
-max_num_batched_tokens: 1024
 max_logprobs: 128000
-middleware: connection.CustomRouteMiddleware
+middleware: pulse.connection.CustomRouteMiddleware
 
-enable_force_include_usage: true
-enable_server_load_tracking: true
+enable_prefix_caching: true
 enable-tokenizer-info-endpoint: true
 enable-sleep-mode: true

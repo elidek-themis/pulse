@@ -1,6 +1,9 @@
 from copy import copy
+from dataclasses import dataclass, field
 from enum import StrEnum
+from pathlib import Path
 
+from pulse.data.file_manager import PulseFile
 from pulse.utils.paths import TASKS
 from pulse.data.pulse_task import PulseConfig
 
@@ -10,6 +13,16 @@ class TaskStatus(StrEnum):
     EXISTS = "Task name already exists"
     DUPLICATE = "Task config already exists"
 
+@dataclass
+class TaskFolder:
+    path: Path = field(init=False)
+    prompts: PulseFile = field(init=False)
+    personas: PulseFile = field(init=False)
+    completions: PulseFile = field(init=False)
+
+    def __post_init__(self):
+        # prompts = self.prompts.to_dict()
+        self.id = ""
 
 class TaskManager:
     def __init__(self):

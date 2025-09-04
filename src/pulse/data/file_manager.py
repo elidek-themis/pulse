@@ -24,10 +24,8 @@ class PulseFile:
         self.stem = self.path.stem
         self.suffix = self.path.suffix
 
-        self.num = self.df.select_dtypes(include="object").columns.tolist()
-        self.alpha_num = self.df.select_dtypes(exclude="object").columns.tolist()
 
-    def to_dict(self, orient: str) -> dict:
+    def to_dict(self, orient: str | None) -> dict:
         return self.df.to_dict(orient=orient)
 
     def __repr__(self) -> str:
@@ -35,8 +33,6 @@ class PulseFile:
             "name": self.name,
             "rows": len(self.df),
             "cols": len(self.df.columns),
-            "numeric": self.num,
-            "alphanumeric": self.alpha_num,
         }
 
         return json.dumps(obj=data, indent=2)

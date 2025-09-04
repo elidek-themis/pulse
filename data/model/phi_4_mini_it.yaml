@@ -7,4 +7,4 @@ max_model_len: 1024
 max_num_seqs: 1
 max_num_batched_tokens: 1024
 max_logprobs: 128
-middleware: connection.CustomRouteMiddleware
+middleware: pulse.connection.CustomRouteMiddleware

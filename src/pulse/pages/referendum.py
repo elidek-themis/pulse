@@ -8,7 +8,7 @@ import streamlit as st
 from lm_eval import evaluate
 from streamlit import session_state as ss
 
-from pulse.data.pulse_task import PulseTask, PulseConfig, PulseResults
+from pulse.data.pulse_task import PulseTask, PulseConfig
 from pulse.data.repository import Repository
 from pulse.data.file_manager import FileStatus
 from pulse.data.task_manager import TaskStatus
@@ -72,17 +72,22 @@ def assign_model() -> None:
 
     ss.vllm_conn.assign_model(ss.selected_model)
     st.toast(f"Assigned model: {ss.selected_model}")
-    time.sleep(0.5)  # interactivity hack
+    time.sleep(0.5)
 
 
 @st.dialog("Create persona", width="large")
 def new_persona() -> None:
     name = st.text_input("Name")
-    st.file_uploader("Upload completions", type=["csv", "json"])
+    uploaded_files = st.file_uploader("Upload persona file", type=["csv", "json"])
 
-    columns = st.text_input("Columns (comma-separated)", placeholder="demographic, group, persona")
-    columns = list(map(str.strip, columns.split(",")))
-    persona_df = pd.DataFrame(columns=columns)
+    if uploaded_files:
+        # add checks
+        _, ext = uploaded_files.name.split(".")
+        persona_df = pd.read_json(uploaded_files) if ext == "json" else pd.read_csv(uploaded_files)
+    else:
+        columns = st.text_input("Columns (comma-separated)", placeholder="demographic, group, persona")
+        columns = list(map(str.strip, columns.split(",")))
+        persona_df = pd.DataFrame(columns=columns)
 
     changed = st.data_editor(persona_df, num_rows="dynamic")
 
@@ -246,7 +251,7 @@ def completions_container() -> None:
         key="selected_completions",
     )
     new_col, edit_col, del_col = st.columns(3)
-    new_col.button("New/Upload", on_click=create_completions, use_container_width=True)
+    new_col.button("Create/Upload", on_click=create_completions, use_container_width=True)
     # if a completion is selected, add view/edit & delete btns
     if selected_completions := ss.get("selected_completions"):
         edit_col.button(
@@ -266,7 +271,7 @@ def batch_container() -> None:
         key="selected_persona",
     )
     new_col, edit_col, del_col = st.columns(3)
-    new_col.button(label="New/Create", on_click=new_persona, key="new_persona", use_container_width=True)
+    new_col.button(label="Create/Upload", on_click=new_persona, key="new_persona", use_container_width=True)
     if selected_persona := ss.get("selected_persona"):
         edit_col.button(
             label="View/Edit",
@@ -315,11 +320,8 @@ def save() -> None:
         st.toast("Please provide a name for the poll.")
     elif not ss.get("selected_completions"):
         st.toast("Please select a completion set.")
+        
     else:
-        if selected_persona := ss.get("selected_persona"):
-            ss.task_config.num = ss.repo.personas[selected_persona].num
-            ss.task_config.alpha_num = ss.repo.personas[selected_persona].alpha_num
-
         status = ss.repo.task_manager.add(task_config=ss.task_config)
         if status == TaskStatus.OK:
             st.toast("Task saved successfully 👌.")
@@ -337,32 +339,52 @@ def show_config() -> None:
 with st.sidebar:
     with st.expander("Connection", expanded=True):
         sidebar_connection()
-    st.divider()
-    tasks = ss.repo.task_manager.tasks
-    st.selectbox(
-        label=f"Tasks ({len(tasks)})",
-        options=tasks,
-        index=None,
-        key="selected_task",
-    )
-    run_col, view_col, del_col = st.columns(3)
-    run_col.button("Run", use_container_width=True)
-    if view_col.button("View", use_container_width=True):
-        show_config()
-    del_col.button("Delete", use_container_width=True)
+    # st.divider()
+    # tasks = ss.repo.task_manager.tasks
+    # st.selectbox(
+    #     label=f"Tasks ({len(tasks)})",
+    #     options=tasks,
+    #     index=None,
+    #     key="selected_task",
+    # )
+    # run_col, view_col, del_col = st.columns(3)
+    # run_col.button("Run", use_container_width=True)
+    # if view_col.button("View", use_container_width=True):
+    #     show_config()
+    # if del_col.button("Delete", use_container_width=True):
+    #     ss.repo.task_manager.delete(task_name=ss.selected_task)
+    #     st.rerun()
 
 st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
 
 task_col, batch_col = st.columns(2)
 task_col.markdown("#### Create a Poll")
 with task_col.container(border=True, height=680):
-    st.text_input(
-        "Name",
-        placeholder="e.g. referendum",
-        on_change=update_task_config,
-        args=("task",),
-        key="task",
+    # st.text_input(
+    #     "Name",
+    #     placeholder="e.g. referendum",
+    #     on_change=update_task_config,
+    #     args=("task",),
+    #     key="task",
+    # )
+    tasks = ss.repo.task_manager.tasks
+    t_col, btn_col =  st.columns((0.4, 0.6))
+    t_col.selectbox(
+        label=f"Tasks ({len(tasks)})",
+        options=tasks,
+        index=None,
+        key="selected_task",
     )
+    with btn_col:
+        st.empty().container(border=False, height=10) # spacer
+        save_col, run_col, del_col = st.columns(3)
+        if save_col.button("Save 💾", use_container_width=True):
+            save()
+        if run_col.button("Run 🏃", use_container_width=True):
+            run_task(name=ss.selected_task)
+        if del_col.button("Delete", use_container_width=True):
+            ss.repo.task_manager.delete(task_name=ss.selected_task)
+            st.rerun()
     st.markdown("<div style='font-size:16px;'>Prompts</div>", unsafe_allow_html=True)
     with st.container(border=True):
         st.text_input(
@@ -393,14 +415,10 @@ with task_col.container(border=True, height=680):
         completions_container()
 
 
-batch_col.markdown("#### ?")
+batch_col.markdown("#### Rankings")
 with batch_col.container(border=True, height=680):
     pass
 
 
-if task_col.button("Save 💾", use_container_width=True):
-    save()
 
 
-if batch_col.button("Run 🏃", use_container_width=True):
-    run_task(name=ss.selected_task)

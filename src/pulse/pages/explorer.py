@@ -182,26 +182,31 @@ def delete_completions(selected_completions) -> None:
         st.rerun()
 
 
-def draw_completions() -> None:
-    st.selectbox(label="Select completions", options=ss.completions.keys(), index=None, key="selected_completions")
-    new_col, edit_col, del_col = st.columns(3)
-    new_col.button("New", on_click=create_completions, use_container_width=True)
-    # if a completion is selected, add view/edit & delete btns
-    if selected_completions := ss.get("selected_completions"):
-        edit_col.button(
-            label="View/Edit", on_click=edit_completions, args=(selected_completions,), use_container_width=True
-        )
-        del_col.button(
-            label="Delete", on_click=delete_completions, args=(selected_completions,), use_container_width=True
-        )
+# def draw_completions() -> None:
+#     st.selectbox(label="Select completions", options=ss.completions.keys(), index=None, key="selected_completions")
+#     new_col, edit_col, del_col = st.columns(3)
+#     new_col.button("New", on_click=create_completions, use_container_width=True)
+#     # if a completion is selected, add view/edit & delete btns
+#     if selected_completions := ss.get("selected_completions"):
+#         edit_col.button(
+#             label="View/Edit", on_click=edit_completions, args=(selected_completions,), use_container_width=True
+#         )
+#         del_col.button(
+#             label="Delete", on_click=delete_completions, args=(selected_completions,), use_container_width=True
+#         )
 
 
 @st.fragment()
 def prompt_container():
     st.text_input(label="Persona", placeholder=ph.persona, key="description")
     st.text_input(label="Question", placeholder=ph.question, key="doc_to_text")
-    st.text_input(label="Answer", placeholder=ph.answer, key="gen_prefix")
-    draw_completions()
+    answer_col, comp_col = st.columns(2)
+
+    answer_col.text_input(label="Answer", placeholder=ph.answer, key="gen_prefix")
+    comp_col.text_input(
+        label="completion", placeholder=" the Democrats", key="completion", help="Mind the leading whitespace!"
+    )
+    # draw_completions()
 
 
 @st.fragment()
@@ -215,17 +220,13 @@ def draw_params():
         step=1,
         key="logprobs",
     )
-    st.checkbox(
-        label="Continue final message",
-        value=True,
-        key="gen_prompt",
-        help=ph.gen_prompt,
-    )
+
+    add_generation_prompt = False if (ss.gen_prefix or ss.completion) else True
 
     ss.extra_body = {
         "extra_body": {
             "logprobs": ss.logprobs,
-            "add_generation_prompt": ss.gen_prompt,
+            "add_generation_prompt": add_generation_prompt,
         }
     }
 
@@ -252,7 +253,7 @@ def get_chat() -> str | None:
 @st.fragment()
 def sample() -> None:
     if chat := get_chat():
-        request = SampleRequest(context=chat, continuation="")
+        request = SampleRequest(context=chat, continuation=ss.completion or "")
         (prompt,) = ss.vllm_conn.sample(requests=[request], **ss.extra_body)
         ss.sample_df = pd.DataFrame(prompt.next_tokens).set_index("rank")
         # (numRows + 1) * 35 + 3
@@ -297,7 +298,7 @@ if ss.vllm_conn.lm.tokenizer.chat_template is None:
 prompt_col, params_col, next_col = st.columns((0.425, 0.15, 0.425))
 
 prompt_col.markdown("<div> Prompt </div>", unsafe_allow_html=True)
-with prompt_col.container(border=True, height=420):
+with prompt_col.container(border=True, height=280):
     prompt_container()
 
 
@@ -320,23 +321,15 @@ def st_md(
 with next_col:
     st_md("Next token")
     next_container = next_col.container(border=True, height=420)
-    st.write("a")
     if "sample_df" in ss:
         next_container.dataframe(ss.sample_df, height=415)
 
 with params_col.container(border=False, height=420) as cont:
-    st.empty().container(border=False, height=100)
+    st.empty().container(border=False, height=138)
     draw_params()
-    sample_label = "Sample next token 👉"  # "Sample 🕵️‍♂️👉"
     st.button(
-        label="Sample next token👉",
+        label="Sample next token",  # 🕵️‍♂️👉
         on_click=sample,
-        use_container_width=True,
-    )
-    rank_label = "Rank completions 👇"  # "Rank 👇📊"
-    st.button(
-        "Rank completions👇",
-        on_click=rank,
         use_container_width=True,
     )
 

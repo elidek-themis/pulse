@@ -68,8 +68,7 @@ class PulseResults:
 
 @dataclass
 class PulseConfig(TaskConfig):
-    num: list[str] = field(default_factory=list)
-    alpha_num: list[str] = field(default_factory=list)
+
 
     def __post_init__(self):
         if not self.dataset_kwargs:
@@ -93,8 +92,6 @@ class PulseConfig(TaskConfig):
             "doc_to_text": self.doc_to_text,
             "gen_prefix": self.gen_prefix,
             "dataset_kwargs": self.dataset_kwargs,
-            "num": self.num,
-            "alpha_num": self.alpha_num,
         }
 
     def to_yaml(self):
@@ -118,11 +115,8 @@ class PulseConfig(TaskConfig):
         return cls(**data)
 
     def to_eval_dict(self) -> dict:
-        task = asdict(self)
-        task.pop("num")
-        task.pop("alpha_num")
-
-        return task
+        # ??
+        return asdict(self)
 
     def __hash__(self) -> int:
         return int(self.id, 16)

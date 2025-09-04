@@ -2,8 +2,7 @@ import math
 
 from typing import Final
 from operator import itemgetter
-from contextlib import contextmanager
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 
 import requests
 
@@ -163,8 +162,6 @@ class VLLMCompletions(TemplateAPI):
             continuation_enc = self.tok_encode(continuation, add_special_tokens=False)
             sample_requests.append((None, context_enc, continuation_enc))
 
-        # make self.create_message go through the decode branch
-        # with self._override_attr("tokenized_requests", False):
         inputs, ctxlens, _ = self.batch_loglikelihood_requests([sample_requests])
         outputs = self.model_call(messages=inputs, generate=False, **kwargs)
         parsed = self.parse_logprobs(outputs=outputs, tokens=inputs, ctxlens=ctxlens, **kwargs)
@@ -274,19 +271,6 @@ class VLLMCompletions(TemplateAPI):
 
     def _parse_continuation():
         pass
-
-    @contextmanager
-    def _override_attr(self, attr: str, value):
-        if not hasattr(self, attr):
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{attr}'")
-
-        original_value = getattr(self, attr)
-        setattr(self, attr, value)
-
-        try:
-            yield
-        finally:
-            setattr(self, attr, original_value)
 
     @staticmethod
     def parse_generations(outputs: dict | list[dict], **kwargs) -> list[list[Token]]:
