@@ -29,11 +29,11 @@ def lineplot(diff, figsize=(8, 6), group_a_color="blue", group_b_color="red") ->
 
     sns.pointplot(
         data=diff,
-        x="$diff$",
-        y="index",
+        x="value",
+        y="Target Group",
         hue="mean",
         dodge=False,
-        palette={"Group A": group_a_color, "Group B": group_b_color},
+        palette={"A": group_a_color, "B": group_b_color},
         linestyle="none",
         markersize=5,
         linewidth=2,
@@ -44,7 +44,7 @@ def lineplot(diff, figsize=(8, 6), group_a_color="blue", group_b_color="red") ->
         ax.scatter(
             data=diff,
             x="pct_diff",
-            y="index",
+            y="Target Group",
             marker="*",
             c="black",
             edgecolors="black",

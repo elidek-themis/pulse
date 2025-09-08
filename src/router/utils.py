@@ -1,5 +1,6 @@
 import requests
 
+HTTP_OK = 200
 
 class Request:
     @staticmethod

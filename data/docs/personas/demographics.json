@@ -54,13 +54,13 @@
     "B pct": 52
   },
   {
-    "group": "Yes LGBT",
+    "group": "LGBT",
     "persona": "an LGBT voter",
     "A pct": 86,
     "B pct": 12
   },
   {
-    "group": "No LGBT",
+    "group": "Non-LGBT",
     "persona": "a non-LGBT voter",
     "A pct": 45,
     "B pct": 53

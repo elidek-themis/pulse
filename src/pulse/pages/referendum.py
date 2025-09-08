@@ -1,6 +1,6 @@
+import math
 import time
-
-from dataclasses import asdict
+from typing_extensions import Literal
 
 import pandas as pd
 import streamlit as st
@@ -8,71 +8,20 @@ import streamlit as st
 from lm_eval import evaluate
 from streamlit import session_state as ss
 
-from pulse.data.pulse_task import PulseTask, PulseConfig
-from pulse.data.repository import Repository
+from pulse.pages.state import (
+    get_chat,
+    st_md,
+    init_session_state,
+    sidebar_connection,
+    persist_session_state,
+)
+from pulse.data.pulse_task import PulseTask
 from pulse.data.file_manager import FileStatus
 from pulse.data.task_manager import TaskStatus
-from pulse.connection.vllm_connection import VLLMConnection
+from pulse.connection.sampler import get_completions_metrics, get_elbows, get_position_df, get_rankings_df
 
-# Session state setup start
-if "task_config" not in ss:
-    ss.task_config = PulseConfig()
-
-if "results" not in ss:
-    ss.results = set()
-
-if "repo" not in ss:
-    ss.repo = Repository()
-
-if "merged_docs" not in ss:
-    ss.merged_docs = None
-
-if "credentials" not in ss:
-    ss.url = None
-    ss.api_key = None
-    ss.credentials = {}
-# Session state setup end
-
-# persist start
-if "selected_model" in ss:
-    ss.selected_model = ss.selected_model
-
-if "description" in ss:
-    ss.description = ss.description
-
-if "doc_to_text" in ss:
-    ss.doc_to_text = ss.doc_to_text
-
-if "gen_prefix" in ss:
-    ss.gen_prefix = ss.gen_prefix
-
-if "selected_completions" in ss:
-    ss.selected_completions = ss.selected_completions
-
-if "selected_persona" in ss:
-    ss.selected_persona = ss.selected_persona
-# persist stop
-
-
-def connect(url: str, api_key: str) -> None:
-    credentials = {"base_url": url, "token": api_key}
-
-    ss.vllm_conn = VLLMConnection("vllm", type=VLLMConnection, **credentials)
-    ss.credentials = credentials
-
-
-def get_models() -> list[str]:
-    r = ss.vllm_conn.get_models().json()
-    models = [d["id"] for d in r["data"]]
-    return models
-
-
-def assign_model() -> None:
-    ss.selected_model = ss._selected_model
-
-    ss.vllm_conn.assign_model(ss.selected_model)
-    st.toast(f"Assigned model: {ss.selected_model}")
-    time.sleep(0.5)
+init_session_state()
+persist_session_state()
 
 
 @st.dialog("Create persona", width="large")
@@ -143,7 +92,7 @@ def delete_persona(selected_persona) -> None:
 
 @st.dialog("Create completions", width="large")
 def create_completions() -> None:
-    name = st.text_input("Name", placeholder="e.g. elections")
+    name = st.text_input("Name")
     st.file_uploader("Upload completions", type=["csv", "json"])
 
     columns = ["A", "B", "alias"]
@@ -212,36 +161,6 @@ def update_dataset_kwargs_completions() -> None:
     ss.task_config.dataset_kwargs.update({"completions": completions})
 
 
-def sidebar_connection() -> None:
-    with st.form("connection_form"):
-        url = st.text_input(
-            label="url",
-            value=ss.credentials.get("base_url"),
-            placeholder="http://localhost:8000",
-        )
-        api_key = st.text_input(
-            label="api_key",
-            value=ss.credentials.get("token"),
-            placeholder="EMPTY",
-            type="password",
-        )
-
-        if st.form_submit_button("Connect"):
-            connect(url, api_key)
-
-    if ss.get("vllm_conn"):
-        models = get_models()
-        index = models.index(ss.selected_model) if ss.get("selected_model") else None
-
-        st.selectbox(
-            label="Select a model",
-            options=models,
-            index=index,
-            on_change=assign_model,
-            key="_selected_model",
-        )
-
-
 def completions_container() -> None:
     st.selectbox(
         label="Select completions",
@@ -251,7 +170,7 @@ def completions_container() -> None:
         key="selected_completions",
     )
     new_col, edit_col, del_col = st.columns(3)
-    new_col.button("Create/Upload", on_click=create_completions, use_container_width=True)
+    new_col.button("Create", on_click=create_completions, use_container_width=True)
     # if a completion is selected, add view/edit & delete btns
     if selected_completions := ss.get("selected_completions"):
         edit_col.button(
@@ -264,14 +183,14 @@ def completions_container() -> None:
 
 def batch_container() -> None:
     st.selectbox(
-        label="Edit Persona File",
+        label="Select personas",
         options=ss.repo.all_personas,
         index=None,
         on_change=update_dataset_kwargs_docs,
         key="selected_persona",
     )
     new_col, edit_col, del_col = st.columns(3)
-    new_col.button(label="Create/Upload", on_click=new_persona, key="new_persona", use_container_width=True)
+    new_col.button(label="Create", on_click=new_persona, key="new_persona", use_container_width=True)
     if selected_persona := ss.get("selected_persona"):
         edit_col.button(
             label="View/Edit",
@@ -308,7 +227,6 @@ def run_task(name: str) -> None:
         )
 
         ss.repo.add_results(model=ss.vllm_conn.lm.model, results=results)
-        # ss.results.add()
         st.toast(f"Run completed for task '{name}' with model '{ss.selected_model}'")
         time.sleep(0.4)
     st.rerun()
@@ -320,7 +238,7 @@ def save() -> None:
         st.toast("Please provide a name for the poll.")
     elif not ss.get("selected_completions"):
         st.toast("Please select a completion set.")
-        
+
     else:
         status = ss.repo.task_manager.add(task_config=ss.task_config)
         if status == TaskStatus.OK:
@@ -337,29 +255,14 @@ def show_config() -> None:
 
 
 with st.sidebar:
-    with st.expander("Connection", expanded=True):
-        sidebar_connection()
-    # st.divider()
-    # tasks = ss.repo.task_manager.tasks
-    # st.selectbox(
-    #     label=f"Tasks ({len(tasks)})",
-    #     options=tasks,
-    #     index=None,
-    #     key="selected_task",
-    # )
-    # run_col, view_col, del_col = st.columns(3)
-    # run_col.button("Run", use_container_width=True)
-    # if view_col.button("View", use_container_width=True):
-    #     show_config()
-    # if del_col.button("Delete", use_container_width=True):
-    #     ss.repo.task_manager.delete(task_name=ss.selected_task)
-    #     st.rerun()
+    sidebar_connection()
+
 
 st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
 
-task_col, batch_col = st.columns(2)
+task_col, comp_col = st.columns(2)
 task_col.markdown("#### Create a Poll")
-with task_col.container(border=True, height=680):
+with task_col.container(border=True, height=800):
     # st.text_input(
     #     "Name",
     #     placeholder="e.g. referendum",
@@ -368,24 +271,26 @@ with task_col.container(border=True, height=680):
     #     key="task",
     # )
     tasks = ss.repo.task_manager.tasks
-    t_col, btn_col =  st.columns((0.4, 0.6))
+    t_col, btn_col = st.columns((0.4, 0.6))
     t_col.selectbox(
-        label=f"Tasks ({len(tasks)})",
+        label="Polls",
         options=tasks,
         index=None,
+        placeholder="Choose a Poll",
         key="selected_task",
     )
     with btn_col:
-        st.empty().container(border=False, height=10) # spacer
+        st.empty().container(border=False, height=10)  # spacer
         save_col, run_col, del_col = st.columns(3)
-        if save_col.button("Save 💾", use_container_width=True):
+        if save_col.button("Save", use_container_width=True, key="save_task"):
             save()
-        if run_col.button("Run 🏃", use_container_width=True):
+        if run_col.button("Run", use_container_width=True, key="run_task"):
             run_task(name=ss.selected_task)
-        if del_col.button("Delete", use_container_width=True):
+        if del_col.button("Delete", use_container_width=True, key="delete_task"):
             ss.repo.task_manager.delete(task_name=ss.selected_task)
             st.rerun()
-    st.markdown("<div style='font-size:16px;'>Prompts</div>", unsafe_allow_html=True)
+
+    st_md(text="Prompts")
     with st.container(border=True):
         st.text_input(
             label="Persona",
@@ -398,27 +303,125 @@ with task_col.container(border=True, height=680):
             batch_container()
         st.text_input(
             label="Question",
-            placeholder="What is your opinion on {{ subject }}?",
+            placeholder="What will you vote for in the 2024 U.S. presidential election?",
             on_change=update_task_config,
             args=("doc_to_text",),
             key="doc_to_text",
         )
         st.text_input(
             label="Answer",
-            placeholder="I believe that",
+            placeholder="I will vote for",
             on_change=update_task_config,
             args=("gen_prefix",),
             key="gen_prefix",
         )
 
-    with st.expander("Completions", expanded=True):
+    # with st.expander("Completions", expanded=True):
+    with st.container(border=True):
         completions_container()
 
 
-batch_col.markdown("#### Rankings")
-with batch_col.container(border=True, height=680):
-    pass
+comp_col.markdown("#### Completion Analysis")
+comp_cont = comp_col.container(border=True, height=800)
 
+if st.button("test"):
+    with comp_cont:
+        if not (chat := get_chat()):
+            st.warning("Provide a prompt to analyze.")
+            st.stop()
 
+        if not (completions := ss.get("selected_completions")):
+            st.warning("Select a completions set to analyze.")
+            st.stop()
 
+        completions = ss.repo.completions[completions].to_dict(orient="list")
+        completions = completions["A"] + completions["B"]
 
+        elbows = get_elbows(
+            lm=ss.vllm_conn.lm,
+            context=chat,
+            completions=completions,
+            v_size=128000,
+            v_pct=0.2,
+            min_p=0.98,
+        )
+        metrics = get_completions_metrics(lm=ss.vllm_conn.lm, context=chat, completions=completions)
+        A_df, B_df = get_rankings_df(metrics=metrics, elbows=elbows)
+
+        a_probs = A_df.logprob.apply(lambda x: math.exp(x)).values
+        b_probs = B_df.logprob.apply(lambda x: math.exp(x)).values
+
+        A_pos = get_position_df(rankings=A_df)
+        B_pos = get_position_df(rankings=B_df)
+
+        _, center_col = st.columns((0.05, 0.9))
+        st_md(text="Side A", container=center_col, font_size="18px", **{"text-align": "center"})
+        A_pos = A_pos.set_table_styles(
+            [
+                {  # index name
+                    "selector": "th.blank",
+                    "props": [
+                        ("color", "white"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {  # index
+                    "selector": "th.row_heading",
+                    "props": [
+                        ("color", "white"),
+                        ("text-align", "left"),
+                    ],
+                },
+                {  # column text color
+                    "selector": "th.col_heading",
+                    "props": [
+                        ("color", "white"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {  # cell text color
+                    "selector": "td > div",
+                    "props": [
+                        ("text-align", "center"),
+                    ],
+                },
+            ],
+            overwrite=False,
+        )
+        st.table(A_pos)
+
+        _, center_col = st.columns((0.05, 0.9))
+        B_pos = B_pos.set_table_styles(
+            [
+                {  # index name
+                    "selector": "th.blank",
+                    "props": [
+                        ("color", "white"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {  # index
+                    "selector": "th.row_heading",
+                    "props": [
+                        ("color", "white"),
+                        ("text-align", "left"),
+                    ],
+                },
+                {  # column text color
+                    "selector": "th.col_heading",
+                    "props": [
+                        ("color", "white"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {  # cell text color
+                    "selector": "td > div",
+                    "props": [
+                        ("text-align", "center"),
+                    ],
+                },
+            ],
+            overwrite=False,
+        )
+        st_md(text="Side B", container=center_col, font_size="18px", **{"text-align": "center"})
+        st.table(B_pos)

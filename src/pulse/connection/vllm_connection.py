@@ -10,6 +10,8 @@ from streamlit import logger
 from streamlit.connections import BaseConnection
 from lm_eval.models.api_models import TemplateAPI
 
+from pulse.utils.tools import ModelCard
+
 _LOGGER: Final = logger.get_logger(__name__)
 
 
@@ -57,9 +59,18 @@ class Sequence:
 
 @dataclass
 class Prompt:
-    context: Sequence
-    continuation: Sequence
-    next_tokens: dict[int, list[Token]]
+    context: Sequence | None
+    continuation: Sequence | None
+    next_tokens: list[Token] | None
+
+    def __str__(self):
+        return_val = "Context:\n"
+        return_val += str(self.context) + "\n"
+        return_val += "Continuation:\n"
+        return_val += str(self.continuation) + "\n"
+        return_val += str(self.next_tokens)
+
+        return return_val
 
 
 class SampleRequest:
@@ -101,12 +112,12 @@ class VLLMConnection(BaseConnection):
     def headers(self) -> dict:
         return {"Authorization": f"Bearer {self._token}"} if self._token else {}
 
-    def assign_model(self, model: str) -> None:
+    def assign_model(self, model_card: ModelCard) -> None:
         base_url = f"{self._base_url}/v1/completions"
         self.lm = VLLMCompletions(
             base_url=base_url,
             api_key=self._token,
-            model=model,
+            model_card=model_card,
             seed=self._seed,
         )
         self.max_logprobs = self._get_max_logprobs()
@@ -140,13 +151,23 @@ class VLLMCompletions(TemplateAPI):
         self,
         base_url: str = None,
         api_key: str = None,
+        model_card: ModelCard = None,
         tokenizer_backend: str = "huggingface",
         **kwargs,
     ):
-        super().__init__(base_url=base_url, tokenizer_backend=tokenizer_backend, **kwargs)
+        model = model_card.root  # root name for tokenizer
+        super().__init__(base_url=base_url, tokenizer_backend=tokenizer_backend, model=model, **kwargs)
+        self.model = model_card.id  # served model name
         self.api_key = api_key
 
-    def sample(self, requests: list[SampleRequest], **kwargs) -> list[Prompt]:
+    def sample(
+        self,
+        requests: list[SampleRequest],
+        parse_context: bool = False,
+        parse_continuation: bool = False,
+        parse_next_tokens: bool = True,
+        **kwargs,
+    ) -> list[Prompt]:
         assert self.tokenized_requests
         extra_body = kwargs.get("extra_body", {})
         add_generation_prompt = extra_body.pop("add_generation_prompt", True)
@@ -164,7 +185,15 @@ class VLLMCompletions(TemplateAPI):
 
         inputs, ctxlens, _ = self.batch_loglikelihood_requests([sample_requests])
         outputs = self.model_call(messages=inputs, generate=False, **kwargs)
-        parsed = self.parse_logprobs(outputs=outputs, tokens=inputs, ctxlens=ctxlens, **kwargs)
+        parsed = self.parse_logprobs(
+            outputs=outputs,
+            tokens=inputs,
+            ctxlens=ctxlens,
+            parse_context=parse_context,
+            parse_continuation=parse_continuation,
+            parse_next_tokens=parse_next_tokens,
+            **kwargs,
+        )
 
         return parsed
 
@@ -202,6 +231,9 @@ class VLLMCompletions(TemplateAPI):
         outputs: dict | list[dict],
         tokens: list[list[int]] = None,
         ctxlens: list[int] = None,
+        parse_context: bool = False,
+        parse_continuation: bool = True,
+        parse_next_tokens: bool = False,
         **kwargs,
     ) -> list[list[Token]]:
         results = []
@@ -211,67 +243,51 @@ class VLLMCompletions(TemplateAPI):
         for out in outputs:
             choice_ctxlen = zip(sorted(out["choices"], key=itemgetter("index")), ctxlens)
             for choice, ctxlen in choice_ctxlen:
-                (first_token, *_) = choice["logprobs"]["tokens"]  # _, *(ctx + cont + prediction)
-                *_, top_logprobs = choice["logprobs"]["top_logprobs"]  # *(_, ctx + cont) + prediction
-                _, *prompt_logprobs = choice["prompt_logprobs"]  # _, *(ctx + cont)
-
-                next_tokens = []
-                top_logprobs = dict(sorted(top_logprobs.items(), key=itemgetter(1), reverse=True))
-                for i, token in enumerate(top_logprobs, start=1):
-                    next_tokens.append(
-                        Token(
-                            token=token,
-                            logprob=top_logprobs[token],
-                            rank=i,
-                        )
-                    )
-
-                # parse context
-                # first token doesn't have a logprob or rank
-                ctx = [Token(token=first_token, logprob=None, rank=None)]
-                for prompt in prompt_logprobs[: ctxlen - 1]:
-                    token = next(iter(prompt.values()))
-                    ctx.append(
-                        Token(
-                            token=token["decoded_token"],
-                            logprob=token["logprob"],
-                            rank=token["rank"],
-                        )
-                    )
-                context = Sequence(tokens=ctx)
-
-                # parse continuation
-                cont = []
-                for prompt in prompt_logprobs[ctxlen - 1 :]:
-                    token = next(iter(prompt.values()))
-                    cont.append(
-                        Token(
-                            token=token["decoded_token"],
-                            logprob=token["logprob"],
-                            rank=token["rank"],
-                        )
-                    )
-                continuation = Sequence(tokens=cont)
+                (top_logprobs,) = choice["logprobs"]["top_logprobs"]
+                prompt_logprobs = choice["prompt_logprobs"]
 
                 results.append(
                     Prompt(
-                        context=context,
-                        continuation=continuation,
-                        next_tokens=next_tokens,
+                        context=VLLMCompletions._parse_logprobs(prompt_logprobs[1:ctxlen]) if parse_context else None,
+                        continuation=VLLMCompletions._parse_logprobs(prompt_logprobs[ctxlen:])
+                        if parse_continuation
+                        else None,
+                        next_tokens=VLLMCompletions._parse_next_tokens(top_logprobs) if parse_next_tokens else None,
                     )
                 )
 
         return results
 
-    def _parse_next_tokens():
-        pass
+    @staticmethod
+    def _parse_logprobs(prompt_logprobs: list[dict]) -> Sequence:
+        seq = []
+        for prompt in prompt_logprobs:
+            token = next(iter(prompt.values()))
+            seq.append(
+                Token(
+                    token=token["decoded_token"],
+                    logprob=token["logprob"],
+                    rank=token["rank"],
+                )
+            )
 
-    def _parse_context():
-        pass
-
-    def _parse_continuation():
-        pass
+        return Sequence(tokens=seq)
 
     @staticmethod
-    def parse_generations(outputs: dict | list[dict], **kwargs) -> list[list[Token]]:
+    def _parse_next_tokens(top_logprobs: dict[str, float]) -> list[Token]:
+        next_tokens = []
+        top_logprobs = dict(sorted(top_logprobs.items(), key=itemgetter(1), reverse=True))
+        for i, token in enumerate(top_logprobs, start=1):
+            next_tokens.append(
+                Token(
+                    token=token,
+                    logprob=top_logprobs[token],
+                    rank=i,
+                )
+            )
+
+        return next_tokens
+
+    @staticmethod
+    def parse_generations(outputs: dict | list[dict], **kwargs) -> Prompt:
         raise NotImplementedError

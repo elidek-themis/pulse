@@ -21,4 +21,3 @@ class Model:
 @dataclass
 class VLLMModel(Model):
     port: int
-    is_sleeping: bool

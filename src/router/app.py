@@ -23,7 +23,7 @@ async def refresh_router():
     while True:
         try:
             router.refresh()
-            logger.info(f"Refreshed router. Found {len(router.model_map)} active vLLM servers")
+            logger.info(f"Refreshed router. Found {len(router.model_map)} active vLLM servers.")
         except Exception as e:
             logger.error(f"Error refreshing router: {e}")
         await asyncio.sleep(10)
@@ -46,7 +46,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="vLLM Router", description="Router for vLLM OpenAI-compatible servers", version="1.0.0", lifespan=lifespan
+    title="vLLM Router",
+    description="Router for vLLM OpenAI-compatible servers",
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -105,7 +108,6 @@ async def proxy_to_vllm(path: str, request: Request):
     target_url = f"http://localhost:{target_port}/{path}"
 
     # TODO: support streaming responses - no buffering (consume body once)
-    # TODO: not all routes require `model` in body
     async with httpx.AsyncClient() as client:
         response = await client.request(
             method=request.method,
@@ -125,7 +127,7 @@ async def proxy_to_vllm(path: str, request: Request):
 
 def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="vLLM Router")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
+    parser.add_argument("--host", type=str, default="localhost", help="Host to bind to (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8000, help="Port to run the router on (default: 8000)")
     parser.add_argument("--vllm-port-start", type=int, default=8001, help="Start of vLLM port range (default: 8001)")
     parser.add_argument("--vllm-port-end", type=int, default=8010, help="End of vLLM port range (default: 8010)")

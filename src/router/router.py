@@ -1,7 +1,7 @@
 from logging import getLogger
 
 from router.model import VLLMModel
-from router.utils import Request, requests
+from router.utils import HTTP_OK, Request, requests
 
 logger = getLogger(__name__)
 
@@ -21,9 +21,8 @@ class Router:
         for port in self.PORT_RANGE:
             if self._hearts_alive(port):
                 model_data = self._get_model_data(port=port)
-                is_sleeping = self._get_status(port)
                 try:
-                    model = VLLMModel(**model_data, port=port, is_sleeping=is_sleeping)
+                    model = VLLMModel(**model_data, port=port)
                 except (TypeError, ValueError) as e:
                     logger.info(f"port {port}: {e}")
                     continue
@@ -50,7 +49,7 @@ class Router:
         try:
             r = Request.health(port)
             r.raise_for_status()
-            return r.status_code == 200  # noqa: PLR2004
+            return r.status_code == HTTP_OK
         except requests.RequestException:
             return False
 

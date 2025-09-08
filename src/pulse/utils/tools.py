@@ -1,15 +1,36 @@
 from enum import StrEnum
+from dataclasses import dataclass
+from collections.abc import Callable
 
 import pandas as pd
 
 
 class Placeholder(StrEnum):
-    persona = "You are a citizen of the United States of America."
+    persona = "You are a citizen a U.S. citizen."
     question = "What will you vote for in the 2024 U.S. presidential election?"
     answer = "I will vote for"
-    gen_prompt = (
-        "Set if if you want to continue the last message. Else, the assistant's role will be appended to the template."
-    )
+    completion = " the Republican"
+
+
+class Latex(StrEnum):
+    diff = r"$\overline{\mathrm{diff}}$"
+
+
+@dataclass
+class ModelCard:
+    id: str
+    root: str
+
+    def __str__(self):
+        return self.id
+
+    def __eq__(self, other):
+        if isinstance(other, ModelCard):
+            return self.root == other.root
+        return False
+
+    def __hash__(self):
+        return hash(self.id)
 
 
 def styler(
@@ -17,47 +38,46 @@ def styler(
     subset: list,
     a_color: str,
     b_color: str,
-    index_color: str = None,
-    header_color: str = None,
-    font_size: str = "14px",  # cells
-    index_font_size: str = "14px",  # index
-    header_font_size: str = "14px",  # headers
+    cell_text_color: str = "white",
+    cond: Callable = lambda x: x >= 0,
 ) -> pd.DataFrame.style:
     def _fn(x):  # style condition for data cells
-        color = a_color if x >= 0 else b_color
-        return f"background-color: {color}; color: black; font-size: {font_size}"
+        color = a_color if cond(x) else b_color
+        return f"background-color: {color}; color: black"
 
     styled = df.style.map(_fn, subset=pd.IndexSlice[:, subset])
 
-    # index text color & font size
-    if index_color or index_font_size:
-        styled = styled.set_table_styles(
-            [
-                {
-                    "selector": "th.row_heading",
-                    "props": [
-                        ("color", index_color if index_color else "inherit"),
-                        ("font-size", index_font_size),
-                    ],
-                }
-            ],
-            overwrite=False,
-        )
-
-    # header text color & font size
-    if header_color or header_font_size:
-        styled = styled.set_table_styles(
-            [
-                {
-                    "selector": "th.col_heading",
-                    "props": [
-                        ("color", header_color if header_color else "inherit"),
-                        ("font-size", header_font_size),
-                        ("text-align", "center"),
-                    ],
-                }
-            ],
-            overwrite=False,
-        )
+    styled = styled.set_table_styles(
+        [
+            {  # index name
+                "selector": "th.blank",
+                "props": [
+                    ("color", cell_text_color),
+                    ("text-align", "center"),
+                ],
+            },
+            {  # index
+                "selector": "th.row_heading",
+                "props": [
+                    ("color", cell_text_color),
+                    ("text-align", "left"),
+                ],
+            },
+            {  # column text color
+                "selector": "th.col_heading",
+                "props": [
+                    ("color", cell_text_color),
+                    ("text-align", "center"),
+                ],
+            },
+            {  # cell text color
+                "selector": "td > div",
+                "props": [
+                    ("text-align", "center"),
+                ],
+            },
+        ],
+        overwrite=False,
+    )
 
     return styled
