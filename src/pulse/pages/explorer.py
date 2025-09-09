@@ -80,7 +80,6 @@ def prompt_container():
         )
 
 
-
 @st.cache_data
 def get_next_tokens(context: list[dict], continuation: str, extra_body: dict) -> pd.DataFrame:
     request = SampleRequest(context=context, continuation=continuation)
@@ -134,5 +133,3 @@ next_container = column.container(border=True, height=207)
 sample_df: pd.DataFrame = ss.get("sample_df")
 if sample_df is not None:
     next_container.dataframe(sample_df, height=415)
-
-st.write("")

@@ -4,6 +4,8 @@ from collections.abc import Callable
 
 import pandas as pd
 
+from pandas.io.formats.style import Styler
+
 
 class Placeholder(StrEnum):
     persona = "You are a citizen a U.S. citizen."
@@ -34,20 +36,23 @@ class ModelCard:
 
 
 def styler(
-    df: pd.DataFrame,
-    subset: list,
-    a_color: str,
-    b_color: str,
+    df: pd.DataFrame | Styler,
+    subset: list[str] | None = None,
+    a_color: str = "#a4c2f4",
+    b_color: str = "#ea9999",
     cell_text_color: str = "white",
     cond: Callable = lambda x: x >= 0,
-) -> pd.DataFrame.style:
+) -> Styler:
     def _fn(x):  # style condition for data cells
         color = a_color if cond(x) else b_color
         return f"background-color: {color}; color: black"
 
-    styled = df.style.map(_fn, subset=pd.IndexSlice[:, subset])
+    styler = df.style.map(_fn, subset=pd.IndexSlice[:, subset])
+    return apply_html(styler, cell_text_color=cell_text_color)
 
-    styled = styled.set_table_styles(
+
+def apply_html(styler: Styler, cell_text_color: str = "white") -> Styler:
+    return styler.set_table_styles(
         [
             {  # index name
                 "selector": "th.blank",
@@ -79,5 +84,3 @@ def styler(
         ],
         overwrite=False,
     )
-
-    return styled

@@ -11,71 +11,15 @@ from streamlit.connections import BaseConnection
 from lm_eval.models.api_models import TemplateAPI
 
 from pulse.utils.tools import ModelCard
+from pulse.connection.types import (
+    Token,
+    Prompt,
+    Sequence,
+    SampleRequest,
+)
+from pulse.connection.mistral_tokenizer import MistralTokenizerWrapper
 
 _LOGGER: Final = logger.get_logger(__name__)
-
-
-@dataclass
-class Token:
-    token: str
-    logprob: float | None
-    rank: int | None
-
-
-@dataclass
-class Sequence:
-    tokens: list[Token]
-
-    def __post_init__(self):
-        n: int = len([t for t in self.tokens if t.rank])
-
-        self.text: str = "".join([t.token for t in self.tokens])
-        self.logprob: float | None = sum(ll for token in self.tokens if (ll := token.logprob)) if n else None
-        self.avg_logprob: float | None = self.logprob / n if n else None
-        self.ppl: float | None = math.exp(-self.avg_logprob) if n else None
-        self.ranks: list[int] = [rank for token in self.tokens if (rank := token.rank)]
-
-    def __str__(self):
-        return_val = f"text: {self.text}\n"
-        return_val += f"logprob: {self.logprob}\n"
-        return_val += f"avg_logprob: {self.avg_logprob}\n"
-        return_val += f"PPL: {self.ppl}\n"
-        return_val += f"ranks: {self.ranks}\n"
-        return return_val
-
-    @property
-    def data(self) -> dict[str, str | float | list[int]]:
-        return {
-            "text": self.text.strip(),
-            "logprob": self.logprob,
-            "avg_logprob": self.avg_logprob,
-            "perplexity": self.ppl,
-            "ranks": self.ranks,
-        }
-
-    def __repr__(self):
-        return self.__str__()
-
-
-@dataclass
-class Prompt:
-    context: Sequence | None
-    continuation: Sequence | None
-    next_tokens: list[Token] | None
-
-    def __str__(self):
-        return_val = "Context:\n"
-        return_val += str(self.context) + "\n"
-        return_val += "Continuation:\n"
-        return_val += str(self.continuation) + "\n"
-        return_val += str(self.next_tokens)
-
-        return return_val
-
-
-class SampleRequest:
-    def __init__(self, context: list[dict], continuation: str):
-        self.args = (context, continuation)
 
 
 class VLLMConnection(BaseConnection):
@@ -122,28 +66,42 @@ class VLLMConnection(BaseConnection):
         )
         self.max_logprobs = self._get_max_logprobs()
 
+    def _assign_chat_template(self) -> None:
+        resp = self._get_chat_template()
+        tok_info = resp.json()
+        if chat_template := tok_info.get("chat_template"):
+            _LOGGER.info("Using chat template from /tokenizer_info endpoint.")
+            _LOGGER.info(chat_template)
+            self.lm.tokenizer.chat_template = chat_template
+
     def get_models(self) -> requests.Response:
         resp = requests.get(f"{self._base_url}/v1/models", headers=self.headers)
         resp.raise_for_status()
         return resp
 
-    def get_model_config(self) -> requests.Response:
+    def _get_model_config(self) -> requests.Response:
         payload = {"model": self.lm.model}
         resp = requests.get(f"{self._base_url}/model_config", json=payload, headers=self.headers)
         if not resp.ok:
             _LOGGER.warning(
-                "/model_config endpoint not enabled, serve with --middleware utils.CustomRouteMiddleware",
+                "/model_config endpoint not enabled, serve with --middleware pulse.connection.CustomRouteMiddleware",
+            )
+        return resp
+
+    def _get_chat_template(self) -> requests.Response:
+        payload = {"model": self.lm.model}
+        resp = requests.get(f"{self._base_url}/tokenizer_info", json=payload, headers=self.headers)
+        if not resp.ok:
+            _LOGGER.warning(
+                "/tokenizer_info endpoint not enabled, serve with --enable-tokenizer-info-endpoint",
             )
         return resp
 
     def _get_max_logprobs(self, vllm_default: int = 20) -> int:
-        resp = self.get_model_config()
+        resp = self._get_model_config()
         model_config = resp.json()
 
         return model_config.get("max_logprobs", vllm_default)
-
-    def sample(self, requests: list[SampleRequest], **kwargs) -> list[Prompt]:
-        return self.lm.sample(requests=requests, **kwargs)
 
 
 class VLLMCompletions(TemplateAPI):
@@ -159,6 +117,9 @@ class VLLMCompletions(TemplateAPI):
         super().__init__(base_url=base_url, tokenizer_backend=tokenizer_backend, model=model, **kwargs)
         self.model = model_card.id  # served model name
         self.api_key = api_key
+
+        if "mistral" in model.lower():
+            self.tokenizer = MistralTokenizerWrapper.from_pretrained(model)
 
     def sample(
         self,
@@ -243,16 +204,20 @@ class VLLMCompletions(TemplateAPI):
         for out in outputs:
             choice_ctxlen = zip(sorted(out["choices"], key=itemgetter("index")), ctxlens)
             for choice, ctxlen in choice_ctxlen:
-                (top_logprobs,) = choice["logprobs"]["top_logprobs"]
+                *_, top_logprobs = choice["logprobs"]["top_logprobs"]
                 prompt_logprobs = choice["prompt_logprobs"]
 
                 results.append(
-                    Prompt(
-                        context=VLLMCompletions._parse_logprobs(prompt_logprobs[1:ctxlen]) if parse_context else None,
-                        continuation=VLLMCompletions._parse_logprobs(prompt_logprobs[ctxlen:])
+                    Prompt(  # start from 1, first token doesn't have logprobs
+                        context=VLLMCompletions._parse_logprobs(prompt_logprobs=prompt_logprobs[1:ctxlen])
+                        if parse_context
+                        else None,
+                        continuation=VLLMCompletions._parse_logprobs(prompt_logprobs=prompt_logprobs[ctxlen:])
                         if parse_continuation
                         else None,
-                        next_tokens=VLLMCompletions._parse_next_tokens(top_logprobs) if parse_next_tokens else None,
+                        next_tokens=VLLMCompletions._parse_next_tokens(top_logprobs=top_logprobs)
+                        if parse_next_tokens
+                        else None,
                     )
                 )
 
@@ -291,3 +256,19 @@ class VLLMCompletions(TemplateAPI):
     @staticmethod
     def parse_generations(outputs: dict | list[dict], **kwargs) -> Prompt:
         raise NotImplementedError
+
+    def apply_chat_template(self, chat_history, add_generation_prompt=True):
+        if any(model in self.model.lower() for model in ("gemma")):
+            chat_history = self._combine_system(chat_history=chat_history)
+        return super().apply_chat_template(chat_history, add_generation_prompt)
+
+    def _combine_system(self, chat_history: list[dict]) -> list[dict]:
+        system_msg, *chat = chat_history
+        if system_msg["role"] != "system":
+            return chat_history
+
+        system_content = system_msg["content"]
+        if chat and chat[0]["role"] == "user":
+            chat[0]["content"] = system_content + "\n" + chat[0]["content"]
+
+        return chat

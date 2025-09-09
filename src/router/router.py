@@ -26,7 +26,7 @@ class Router:
                 except (TypeError, ValueError) as e:
                     logger.info(f"port {port}: {e}")
                     continue
-                model_map[model.root] = model
+                model_map[model.id] = model
 
         return model_map
 

@@ -11,5 +11,4 @@ wheels/
 
 # Development
 .vscode/
-.streamlit/secrets.toml
 prototyping.ipynb

@@ -7,7 +7,7 @@ from pulse.connection.vllm_connection import SampleRequest, Token, VLLMCompletio
 
 
 def reduce_prefixes(completions: list[str]) -> list[str]:
-    """Calculates common prefixes between completions."""
+    """Calculate common prefixes between completions."""
 
     prefixes = []
 
@@ -38,7 +38,7 @@ def sample_next_tokens(
         **{
             "extra_body": {
                 "add_generation_prompt": False,
-                "logprobs": v_size * v_pct,
+                "logprobs": int(v_size * v_pct),
                 "echo": False,
             }
         },
@@ -48,7 +48,7 @@ def sample_next_tokens(
 
 
 def find_elbow_rank(logprobs: list[float], min_p: float) -> int:
-    """Finds the elbow rank where cumulative probability exceeds `min_p`"""
+    """Find the elbow rank where cumulative probability exceeds `min_p`"""
 
     logprobs = np.array(logprobs)
 
@@ -135,48 +135,11 @@ def get_rankings_df(
     return rankings.iloc[:mid], rankings.iloc[mid:]
 
 
-# def get_position_df(
-#     rankings: pd.DataFrame,
-#     yes: str = "✔",
-#     yes_color: str = "lightgreen",
-#     no: str = "✖",
-#     no_color: str = "lightcoral",
-# ) -> pd.DataFrame:
-#     """df: if each token's rank is within the elbow rank"""
-
-#     assert "ranks" in rankings.columns and "elbows" in rankings.columns
-
-#     max_len = max(len(r) for r in rankings["ranks"])
-
-#     data = {}
-#     for i in range(max_len):
-#         col = []
-#         for _, row in rankings.iterrows():
-#             ranks = row["ranks"]
-#             elbows = row["elbows"]
-#             if i < len(ranks) and i < len(elbows):
-#                 col.append(yes if ranks[i] <= elbows[i] else no)
-#             else:
-#                 col.append("")  # pad
-#         data[f"index {i}"] = col
-
-#     comp_df = pd.DataFrame(data, index=rankings.index)
-
-#     def color_fn(val):
-#         if val == yes:
-#             return f"background-color: {yes_color}; text-align:center"
-#         elif val == no:
-#             return f"background-color: {no_color}; text-align:center"
-#         return ""
-
-#     return comp_df.style.map(color_fn)
-
-
 def get_position_df(
     rankings: pd.DataFrame,
     yes_bg: str = "lightgreen",
     no_bg: str = "lightcoral",
-) -> pd.DataFrame:
+) -> pd.DataFrame.style:
     assert "ranks" in rankings.columns and "elbows" in rankings.columns
 
     max_len = max(len(r) for r in rankings["ranks"])

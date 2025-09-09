@@ -1,9 +1,8 @@
 import time
 
-from dataclasses import asdict
 from typing import Literal
+from dataclasses import asdict
 
-import pandas as pd
 import streamlit as st
 
 from streamlit import session_state as ss
@@ -96,12 +95,12 @@ def assign_model() -> None:
 def sidebar_connection() -> None:
     with st.form("connection_form"):
         url = st.text_input(
-            label="url",
+            label="URL",
             value=ss.credentials.get("base_url"),
             placeholder="http://localhost:8000",
         )
         api_key = st.text_input(
-            label="api_key",
+            label="API Key",
             value=ss.credentials.get("token"),
             placeholder="EMPTY",
             type="password",
@@ -140,35 +139,3 @@ def get_chat() -> str | None:
     else:
         st.toast("No chat to submit.")
         return None
-
-
-def static_table(
-    styler: pd.DataFrame,
-    text_align: Literal["left", "center", "right"] = "center",
-    line_color: str = "rgba(150, 150, 150, 0.3)",
-) -> None:
-    common_props = [
-        ("text-align", text_align),
-        ("border", f"1px solid {line_color}"),
-        ("padding", "0.25rem 0.375rem"),
-        ("vertical-align", "middle"),
-        ("line-height", "1.5rem"),
-    ]
-
-    st.html(
-        styler.hide(axis="columns")
-        .format(precision=4)
-        .set_table_styles(
-            [
-                {  # Header
-                    "selector": "th",
-                    "props": common_props,
-                },
-                {  # Data
-                    "selector": "td",
-                    "props": common_props,
-                },
-            ]
-        )
-        .to_html(table_attributes='style="width: 100%;"')
-    )

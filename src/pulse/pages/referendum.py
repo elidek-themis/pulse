@@ -19,6 +19,7 @@ from pulse.data.pulse_task import PulseTask
 from pulse.data.file_manager import FileStatus
 from pulse.data.task_manager import TaskStatus
 from pulse.connection.sampler import get_completions_metrics, get_elbows, get_position_df, get_rankings_df
+from pulse.utils.tools import apply_html, styler
 
 init_session_state()
 persist_session_state()
@@ -263,15 +264,8 @@ st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
 task_col, comp_col = st.columns(2)
 task_col.markdown("#### Create a Poll")
 with task_col.container(border=True, height=800):
-    # st.text_input(
-    #     "Name",
-    #     placeholder="e.g. referendum",
-    #     on_change=update_task_config,
-    #     args=("task",),
-    #     key="task",
-    # )
     tasks = ss.repo.task_manager.tasks
-    t_col, btn_col = st.columns((0.4, 0.6))
+    t_col, btn_col = st.columns((0.4, 0.6), vertical_alignment="bottom")
     t_col.selectbox(
         label="Polls",
         options=tasks,
@@ -280,7 +274,6 @@ with task_col.container(border=True, height=800):
         key="selected_task",
     )
     with btn_col:
-        st.empty().container(border=False, height=10)  # spacer
         save_col, run_col, del_col = st.columns(3)
         if save_col.button("Save", use_container_width=True, key="save_task"):
             save()
@@ -316,7 +309,6 @@ with task_col.container(border=True, height=800):
             key="gen_prefix",
         )
 
-    # with st.expander("Completions", expanded=True):
     with st.container(border=True):
         completions_container()
 
@@ -341,87 +333,19 @@ if st.button("test"):
             lm=ss.vllm_conn.lm,
             context=chat,
             completions=completions,
-            v_size=128000,
-            v_pct=0.2,
-            min_p=0.98,
+            v_size=ss.vllm_conn.max_logprobs,
+            v_pct=st.secrets.sampling.V_PCT,
+            min_p=st.secrets.sampling.MIN_P,
         )
         metrics = get_completions_metrics(lm=ss.vllm_conn.lm, context=chat, completions=completions)
         A_df, B_df = get_rankings_df(metrics=metrics, elbows=elbows)
 
-        a_probs = A_df.logprob.apply(lambda x: math.exp(x)).values
-        b_probs = B_df.logprob.apply(lambda x: math.exp(x)).values
-
         A_pos = get_position_df(rankings=A_df)
         B_pos = get_position_df(rankings=B_df)
 
-        _, center_col = st.columns((0.05, 0.9))
-        st_md(text="Side A", container=center_col, font_size="18px", **{"text-align": "center"})
-        A_pos = A_pos.set_table_styles(
-            [
-                {  # index name
-                    "selector": "th.blank",
-                    "props": [
-                        ("color", "white"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {  # index
-                    "selector": "th.row_heading",
-                    "props": [
-                        ("color", "white"),
-                        ("text-align", "left"),
-                    ],
-                },
-                {  # column text color
-                    "selector": "th.col_heading",
-                    "props": [
-                        ("color", "white"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {  # cell text color
-                    "selector": "td > div",
-                    "props": [
-                        ("text-align", "center"),
-                    ],
-                },
-            ],
-            overwrite=False,
-        )
-        st.table(A_pos)
+        st_md(text="Side A", font_size="18px", **{"text-align": "center"})
+        st.table(apply_html(styler=A_pos, cell_text_color="white"))
 
-        _, center_col = st.columns((0.05, 0.9))
-        B_pos = B_pos.set_table_styles(
-            [
-                {  # index name
-                    "selector": "th.blank",
-                    "props": [
-                        ("color", "white"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {  # index
-                    "selector": "th.row_heading",
-                    "props": [
-                        ("color", "white"),
-                        ("text-align", "left"),
-                    ],
-                },
-                {  # column text color
-                    "selector": "th.col_heading",
-                    "props": [
-                        ("color", "white"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {  # cell text color
-                    "selector": "td > div",
-                    "props": [
-                        ("text-align", "center"),
-                    ],
-                },
-            ],
-            overwrite=False,
-        )
-        st_md(text="Side B", container=center_col, font_size="18px", **{"text-align": "center"})
-        st.table(B_pos)
+        st_md(text="Side B", font_size="18px", **{"text-align": "center"})
+        st.table(apply_html(styler=B_pos, cell_text_color="white"))
+
