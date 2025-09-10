@@ -1,26 +1,35 @@
-### PULSE – Polling Using LLM-based Sentiment Extraction (Demo at CIKM 2025)
+### PULSE – Polling Using LLM-based Sentiment Extraction (Demo at ICDM 2025)
 
-Packaged with [uv](https://github.com/astral-sh/uv) \
-For dependencies, see [pyproject.toml](pyproject.toml)
+Packaged with [uv](https://github.com/astral-sh/uv) 
+
+PULSE is build with
+* [vLLM](https://github.com/vllm-project/vllm)
+* [lm-eval](https://github.com/vllm-project/vllm)
+* [Streamlit](https://github.com/streamlit/streamlit)
+
+All dependencies, [pyproject.toml](pyproject.toml)
 
 ```bash
 # install dependencies
-uv sync | uv sync --extra dev
+uv sync
 
 # activate venv
 source .venv/bin/activate
-
-# run the app
-pulse
 ```
+
+Use the router package to serve multiple models on a single host. \
+vLLM [configuration files](data/model/) are provided for reproducibility.
+```bash
+# i.e. serve on http://localhost:8000 and discover models in 8001-8010
+router --host localhost --port 8000 --vllm-port-start 8001 --vllm-port-end 8010
+vllm serve --config data/models/llama_3_1_8b_it.yaml --port 8001
+vllm serve --config data/models/gemma_2_27b_it.yaml --port 8002
+vllm serve --config data/models/mistral_7b_v03.yaml --port 8003
+```
+
+Run PULSE. \
 The Streamlit web interface will automatically launch at: [http://localhost:8501](http://localhost:8501)
 
-You can serve a model locally using [vLLM](https://docs.vllm.ai/en/stable/) by running:
 ```bash
-vllm serve meta-llama/Llama-3.1-8B-Instruct \
-  --host localhost \
-  --port 8000 \
-  --gpu_memory_utilization 0.8 \
-  --max_model_len 1024 \
+pulse
 ```
-or connect to an OpenAI compatible server.

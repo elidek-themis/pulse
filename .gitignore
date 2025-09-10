@@ -12,3 +12,7 @@ wheels/
 # Development
 .vscode/
 prototyping.ipynb
+
+# # Data
+/data/results/
+/data/tasks
