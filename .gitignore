@@ -10,5 +10,9 @@ wheels/
 .venv
 
 # Development
-.streamlit/secrets.toml
+.vscode/
 prototyping.ipynb
+
+# # Data
+/data/results/
+/data/tasks

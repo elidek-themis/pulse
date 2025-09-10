@@ -1,0 +1,12 @@
+model: google/gemma-2-27b-it
+served_model_name: Gemma 2 27B Instruct
+# chat_template: ./data/chat_templates/gemma_2_system.jinja
+host: localhost
+port: 8002
+gpu_memory_utilization: 0.5
+max_model_len: 1024
+max_logprobs: 256000
+middleware: pulse.connection.CustomRouteMiddleware
+
+enable_prefix_caching: true
+enable-tokenizer-info-endpoint: true

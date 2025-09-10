@@ -1,0 +1,35 @@
+{
+    "A": {
+        "0": "the Democrats",
+        "1": "the Democratic party",
+        "2": "the Democratic candidate",
+        "3": "the Democratic nominee",
+        "4": "the liberal candidate",
+        "9": "the Blue party",
+        "5": "the candidate of the Democrats",
+        "6": "the candidate of the Democratic party",
+        "7": "Joe Biden"
+    },
+    "B": {
+        "0": "the Republicans",
+        "1": "the Republican party",
+        "2": "the Republican candidate",
+        "3": "the Republican nominee",
+        "4": "the conservative candidate",
+        "9": "the Red party",
+        "5": "the candidate of the Republicans",
+        "6": "the candidate of the Republican party",
+        "7": "Donald Trump"
+    },
+    "alias": {
+        "0": "(D\/R)",
+        "1": "(D\/R) party",
+        "2": "(D\/R) candidate",
+        "3": "(D\/R) nominee",
+        "4": "(conservative\/liberal)",
+        "9": "(Blue\/Red)",
+        "5": "candidate of the (D\/R)",
+        "6": "candidate of the (D\/R) party",
+        "7": "fullname"
+    }
+}

@@ -1,0 +1,13 @@
+model: microsoft/phi-4
+served_model_name: Phi 4
+host: localhost
+port: 8004
+gpu_memory_utilization: 0.3
+max_model_len: 1024
+max_num_seqs: 1
+max_num_batched_tokens: 1024
+max_logprobs: 128
+middleware: pulse.connection.CustomRouteMiddleware
+
+enable_prefix_caching: true
+enable-tokenizer-info-endpoint: true
