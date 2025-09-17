@@ -1,6 +1,5 @@
 model: google/gemma-2-27b-it
 served_model_name: Gemma 2 27B Instruct
-# chat_template: ./data/chat_templates/gemma_2_system.jinja
 host: localhost
 port: 8002
 gpu_memory_utilization: 0.5

@@ -3,7 +3,7 @@ import hashlib
 
 from typing import Any, Self
 from pathlib import Path
-from dataclasses import field, asdict, dataclass
+from dataclasses import asdict, dataclass
 from collections.abc import Callable
 
 import yaml
@@ -68,8 +68,6 @@ class PulseResults:
 
 @dataclass
 class PulseConfig(TaskConfig):
-
-
     def __post_init__(self):
         if not self.dataset_kwargs:
             self.dataset_kwargs = {"docs": None}

@@ -1,6 +1,4 @@
-import math
 import time
-from typing_extensions import Literal
 
 import pandas as pd
 import streamlit as st
@@ -9,17 +7,22 @@ from lm_eval import evaluate
 from streamlit import session_state as ss
 
 from pulse.pages.state import (
-    get_chat,
     st_md,
+    get_chat,
     init_session_state,
     sidebar_connection,
     persist_session_state,
 )
+from pulse.utils.tools import apply_html
 from pulse.data.pulse_task import PulseTask
 from pulse.data.file_manager import FileStatus
 from pulse.data.task_manager import TaskStatus
-from pulse.connection.sampler import get_completions_metrics, get_elbows, get_position_df, get_rankings_df
-from pulse.utils.tools import apply_html, styler
+from pulse.connection.sampler import (
+    get_elbows,
+    get_position_df,
+    get_rankings_df,
+    get_completions_metrics,
+)
 
 init_session_state()
 persist_session_state()
@@ -233,17 +236,21 @@ def run_task(name: str) -> None:
     st.rerun()
 
 
+@st.dialog("Save Task", width="small")
 def save() -> None:
-    # GUARDS start
+    st.text_input("Poll Name", key="task")
+
     if not ss.task:
         st.toast("Please provide a name for the poll.")
     elif not ss.get("selected_completions"):
         st.toast("Please select a completion set.")
 
     else:
+        update_task_config("task")
         status = ss.repo.task_manager.add(task_config=ss.task_config)
         if status == TaskStatus.OK:
             st.toast("Task saved successfully 👌.")
+            time.sleep(0.5)
             st.rerun()
         else:
             st.toast(f"Save failed with status: {status}")
@@ -263,6 +270,9 @@ st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
 
 task_col, comp_col = st.columns(2)
 task_col.markdown("#### Create a Poll")
+comp_col.markdown("#### Completion Analysis")
+comp_cont = comp_col.container(border=True, height=800)
+
 with task_col.container(border=True, height=800):
     tasks = ss.repo.task_manager.tasks
     t_col, btn_col = st.columns((0.4, 0.6), vertical_alignment="bottom")
@@ -313,10 +323,7 @@ with task_col.container(border=True, height=800):
         completions_container()
 
 
-comp_col.markdown("#### Completion Analysis")
-comp_cont = comp_col.container(border=True, height=800)
-
-if st.button("test"):
+if st.button("Rank completions"):
     with comp_cont:
         if not (chat := get_chat()):
             st.warning("Provide a prompt to analyze.")
@@ -334,8 +341,8 @@ if st.button("test"):
             context=chat,
             completions=completions,
             v_size=ss.vllm_conn.max_logprobs,
-            v_pct=st.secrets.sampling.V_PCT,
-            min_p=st.secrets.sampling.MIN_P,
+            v_pct=st.secrets.V_PCT,
+            min_p=st.secrets.MIN_P,
         )
         metrics = get_completions_metrics(lm=ss.vllm_conn.lm, context=chat, completions=completions)
         A_df, B_df = get_rankings_df(metrics=metrics, elbows=elbows)
@@ -344,8 +351,9 @@ if st.button("test"):
         B_pos = get_position_df(rankings=B_df)
 
         st_md(text="Side A", font_size="18px", **{"text-align": "center"})
-        st.table(apply_html(styler=A_pos, cell_text_color="white"))
+        with st.container(border=False, height=350):
+            st.table(apply_html(styler=A_pos, cell_text_color="white"))
 
         st_md(text="Side B", font_size="18px", **{"text-align": "center"})
-        st.table(apply_html(styler=B_pos, cell_text_color="white"))
-
+        with st.container(border=False, height=350):
+            st.table(apply_html(styler=B_pos, cell_text_color="white"))

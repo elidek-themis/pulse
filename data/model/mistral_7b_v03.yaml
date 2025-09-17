@@ -1,16 +1,10 @@
 model: mistralai/Mistral-7B-Instruct-v0.3
-tokenizer_mode: mistral
-config_format: mistral
-load_format: mistral
 served_model_name: Mistral v0.3 7B Instruct
-# chat_template: ./data/chat_templates/mistral_3_system.jinja
 host: localhost
 port: 8003
 gpu_memory_utilization: 0.2
 max_model_len: 1024
-max_num_seqs: 1
-max_num_batched_tokens: 1024
-max_logprobs: 128000
+max_logprobs: 32768
 middleware: pulse.connection.CustomRouteMiddleware
 
 enable_prefix_caching: true

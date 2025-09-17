@@ -1,9 +1,6 @@
 from copy import copy
-from dataclasses import dataclass, field
 from enum import StrEnum
-from pathlib import Path
 
-from pulse.data.file_manager import PulseFile
 from pulse.utils.paths import TASKS
 from pulse.data.pulse_task import PulseConfig
 
@@ -13,16 +10,6 @@ class TaskStatus(StrEnum):
     EXISTS = "Task name already exists"
     DUPLICATE = "Task config already exists"
 
-@dataclass
-class TaskFolder:
-    path: Path = field(init=False)
-    prompts: PulseFile = field(init=False)
-    personas: PulseFile = field(init=False)
-    completions: PulseFile = field(init=False)
-
-    def __post_init__(self):
-        # prompts = self.prompts.to_dict()
-        self.id = ""
 
 class TaskManager:
     def __init__(self):
@@ -41,8 +28,10 @@ class TaskManager:
         return tasks
 
     def add(self, task_config: PulseConfig) -> TaskStatus:
-        if self._name_exists(name=task_config.task):
-            return TaskStatus.EXISTS
+        # allow task overwrite
+        # if self._name_exists(name=task_config.task):
+        #     return TaskStatus.EXISTS
+
         if self._is_duplicate(task_config=task_config):
             return TaskStatus.DUPLICATE
 

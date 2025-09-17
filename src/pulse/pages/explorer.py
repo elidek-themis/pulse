@@ -7,8 +7,8 @@ import streamlit as st
 from streamlit import session_state as ss
 
 from pulse.pages.state import (
-    get_chat,
     st_md,
+    get_chat,
     init_session_state,
     sidebar_connection,
     persist_session_state,
@@ -121,7 +121,7 @@ if ss.vllm_conn.lm.tokenizer.chat_template is None:
     st.error("Selected model has no chat template.")
     st.stop()
 
-_, column, _ = st.columns((0.2, 0.3, 0.2))
+_, column, _ = st.columns((0.2, 0.2, 0.2))
 column.subheader("Explorer")
 
 st_md(text="Prompt", container=column)
@@ -129,7 +129,9 @@ with column:
     prompt_container()
 
 st_md("Next token", container=column)
-next_container = column.container(border=True, height=207)
+next_container = column.container(border=True, height=165)
 sample_df: pd.DataFrame = ss.get("sample_df")
 if sample_df is not None:
     next_container.dataframe(sample_df, height=415)
+
+st.write("")
