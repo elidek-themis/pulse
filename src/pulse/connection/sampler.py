@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from pulse.connection.vllm_connection import SampleRequest, Token, VLLMCompletions
+from pulse.connection.vllm_connection import Token, SampleRequest, VLLMCompletions
 
 
 def reduce_prefixes(completions: list[str]) -> list[str]:

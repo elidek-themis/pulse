@@ -1,6 +1,6 @@
 import seaborn as sns
+import matplotlib.pyplot as plt
 
-from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 
 STAR = {
@@ -64,5 +64,7 @@ def lineplot(diff, figsize=(8, 6), group_a_color="blue", group_b_color="red") ->
         ncols=2,
     )
     ax.set_xticks([-1, 0, 1])
+
+    plt.margins(y=0.02)
 
     return fig

@@ -1,8 +1,5 @@
-import math
-
 from typing import Final
 from operator import itemgetter
-from dataclasses import dataclass
 
 import requests
 
@@ -62,6 +59,7 @@ class VLLMConnection(BaseConnection):
             base_url=base_url,
             api_key=self._token,
             model_card=model_card,
+            # batch_size=,
             seed=self._seed,
         )
         self.max_logprobs = self._get_max_logprobs()
@@ -102,6 +100,9 @@ class VLLMConnection(BaseConnection):
         model_config = resp.json()
 
         return model_config.get("max_logprobs", vllm_default)
+
+    def sample(self, requests: list[SampleRequest], **kwargs) -> list[Prompt]:
+        return self.lm.sample(requests=requests, **kwargs)
 
 
 class VLLMCompletions(TemplateAPI):
@@ -258,7 +259,7 @@ class VLLMCompletions(TemplateAPI):
         raise NotImplementedError
 
     def apply_chat_template(self, chat_history, add_generation_prompt=True):
-        if any(model in self.model.lower() for model in ("gemma")):
+        if any(model in self.model.lower() for model in ["gemma"]):
             chat_history = self._combine_system(chat_history=chat_history)
         return super().apply_chat_template(chat_history, add_generation_prompt)
 

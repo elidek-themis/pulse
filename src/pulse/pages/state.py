@@ -1,6 +1,5 @@
 import time
 
-from typing import Literal
 from dataclasses import asdict
 
 import streamlit as st
@@ -71,6 +70,7 @@ def connect(url: str, api_key: str) -> None:
     credentials = {"base_url": url, "token": api_key}
 
     ss.vllm_conn = VLLMConnection("vllm", type=VLLMConnection, **credentials)
+    # ss.vllm_conn = st.connection(name="vllm", type=VLLMConnection, **credentials)
     ss.credentials = credentials
 
 
@@ -87,7 +87,8 @@ def get_models() -> list[str]:
 def assign_model() -> None:
     ss.selected_model = ss._selected_model
 
-    ss.vllm_conn.assign_model(ss.selected_model)
+    # batch_size = st.secrets.sampling.BATCH_SIZE
+    ss.vllm_conn.assign_model(model_card=ss.selected_model)
     st.toast(f"Assigned model: {ss.selected_model}")
     time.sleep(0.5)
 
@@ -136,6 +137,5 @@ def get_chat() -> str | None:
 
     if chat_history:
         return chat_history
-    else:
-        st.toast("No chat to submit.")
-        return None
+
+    st.toast("No chat to submit.")

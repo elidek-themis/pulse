@@ -1,115 +1,115 @@
 [
   {
     "group": "Men",
-    "persona": "a male voter",
+    "persona": "a male U.S. citizen",
     "A pct": 43,
     "B pct": 55
   },
   {
     "group": "Women",
-    "persona": "a female voter",
+    "persona": "a female U.S. citizen",
     "A pct": 53,
     "B pct": 45
   },
   {
     "group": "White",
-    "persona": "a white voter",
+    "persona": "a white U.S. citizen",
     "A pct": 42,
     "B pct": 57
   },
   {
     "group": "Colored",
-    "persona": "a voter of color",
+    "persona": "a U.S. citizen of color",
     "A pct": 64,
     "B pct": 33
   },
   {
     "group": "Christian",
-    "persona": "a Christian voter",
+    "persona": "a Christian U.S. citizen",
     "A pct": 37,
     "B pct": 62
   },
   {
     "group": "Jewish",
-    "persona": "a Jewish voter",
+    "persona": "a Jewish U.S. citizen",
     "A pct": 78,
     "B pct": 22
   },
   {
     "group": "Non-religious",
-    "persona": "a non-religious voter",
+    "persona": "a non-religious U.S. citizen",
     "A pct": 71,
     "B pct": 27
   },
   {
     "group": "18-44 years old",
-    "persona": "a voter of age 18-44",
+    "persona": "a U.S. citizen of age 18-44",
     "A pct": 52,
     "B pct": 45
   },
   {
     "group": "45+",
-    "persona": "a voter of age 45 or older",
+    "persona": "a U.S. citizen of age 45 or older",
     "A pct": 46,
     "B pct": 52
   },
   {
     "group": "LGBT",
-    "persona": "an LGBT voter",
+    "persona": "an LGBT U.S. citizen",
     "A pct": 86,
     "B pct": 12
   },
   {
     "group": "Non-LGBT",
-    "persona": "a non-LGBT voter",
+    "persona": "a non-LGBT U.S. citizen",
     "A pct": 45,
     "B pct": 53
   },
   {
     "group": "No college degree",
-    "persona": "a voter without a college degree",
+    "persona": "a U.S. citizen without a college degree",
     "A pct": 43,
     "B pct": 56
   },
   {
     "group": "College graduate",
-    "persona": "a voter with a college degree",
+    "persona": "a U.S. citizen with a college degree",
     "A pct": 56,
     "B pct": 42
   },
   {
     "group": "Under $50,000",
-    "persona": "a voter with income under $50,000",
+    "persona": "a U.S. citizen with income under $50,000",
     "A pct": 48,
     "B pct": 50
   },
   {
     "group": "$50,000 to $99,999",
-    "persona": "a voter with income between $50,000 and $99,999",
+    "persona": "a U.S. citizen with income between $50,000 and $99,999",
     "A pct": 46,
     "B pct": 52
   },
   {
     "group": "Over $100,000",
-    "persona": "a voter with income over $100,000",
+    "persona": "a U.S. citizen with income over $100,000",
     "A pct": 51,
     "B pct": 47
   },
   {
     "group": "Urban",
-    "persona": "a voter living in an urban area",
+    "persona": "a U.S. citizen living in an urban area",
     "A pct": 60,
     "B pct": 38
   },
   {
     "group": "Suburban",
-    "persona": "a voter living in a suburban area",
+    "persona": "a U.S. citizen living in a suburban area",
     "A pct": 47,
     "B pct": 51
   },
   {
     "group": "Rural",
-    "persona": "a voter living in a rural area",
+    "persona": "a U.S. citizen living in a rural area",
     "A pct": 34,
     "B pct": 64
   }

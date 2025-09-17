@@ -1,10 +1,13 @@
 import json
+import logging
 
 from enum import StrEnum
 from pathlib import Path
 from dataclasses import dataclass
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class FileStatus(StrEnum):
@@ -23,7 +26,6 @@ class PulseFile:
         self.name = self.path.name
         self.stem = self.path.stem
         self.suffix = self.path.suffix
-
 
     def to_dict(self, orient: str | None) -> dict:
         return self.df.to_dict(orient=orient)
@@ -76,21 +78,17 @@ class FileManager:
             # update data
             pulse_file.data = df
 
-    # TODO: remove?
-    def to_dict(self, key: str, orient: str):
-        return self.data[key].to_dict(orient=orient)
-
     def _add(self, file: Path, df: pd.DataFrame) -> FileStatus:
         if file.stem in self.data:
-            # logger info
+            logger.info(f"File {file.stem} already exists.")
             return FileStatus.EXISTS
 
         if not self._is_valid_schema(df=df):
-            # logger info
+            logger.info(f"File {file.stem} has invalid schema.")
             return FileStatus.INVALID_SCHEMA
 
         if self._has_nan(df=df):
-            # logger info
+            logger.info(f"File {file.stem} contains missing values.")
             return FileStatus.MISSING_VALUES
 
         pulse_file = PulseFile(path=file, df=df)
