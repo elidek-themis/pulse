@@ -12,6 +12,8 @@ if torch_mod and hasattr(torch_mod, "classes"):
 
 st.set_page_config(layout="wide")
 st.html(pathlib.Path(".streamlit/styles.css"))
+st.html(pathlib.Path(".streamlit/logo.css"))
+
 nav = get_nav_from_toml(".streamlit/pages_sections.toml")
 
 pg = st.navigation(pages=nav)
