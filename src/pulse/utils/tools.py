@@ -1,17 +1,19 @@
 from enum import StrEnum
+from pathlib import Path
 from dataclasses import dataclass
 from collections.abc import Callable
 
 import pandas as pd
+import matplotlib.font_manager as fm
 
 from pandas.io.formats.style import Styler
 
 
 class Placeholder(StrEnum):
-    persona = "You are a citizen a U.S. citizen."
-    question = "What will you vote for in the 2024 U.S. presidential election?"
+    persona = "You are a citizen of the U.S."
+    question = "Who will you vote for in the 2024 U.S. presidential election?"
     answer = "I will vote for"
-    completion = " the Republican"
+    completion = " the Democratic"
 
 
 class Latex(StrEnum):
@@ -33,6 +35,16 @@ class ModelCard:
 
     def __hash__(self):
         return hash(self.id)
+
+
+def contains_placeholder(s: str) -> bool:
+    """Detect if a string has Jinja2 placeholders."""
+    from jinja2 import Environment, meta  # noqa: PLC0415
+
+    env = Environment()
+    ast = env.parse(s)
+
+    return any(meta.find_undeclared_variables(ast))
 
 
 def styler(
@@ -84,3 +96,10 @@ def apply_html(styler: Styler, cell_text_color: str = "white") -> Styler:
         ],
         overwrite=False,
     )
+
+
+def register_fonts(font_dir: str = "src/pulse/static") -> None:
+    font_path = Path(font_dir)
+
+    for font in font_path.rglob("*.ttf"):
+        fm.fontManager.addfont(font)

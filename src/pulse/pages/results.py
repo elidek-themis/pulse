@@ -32,12 +32,6 @@ def select(runs: pd.DataFrame) -> tuple:
 def task_summary(results) -> None:
     choices = results.choices.item()
 
-    # if "choices" not in ss: # DELETE?
-    #     ss.choices = {
-    #         "Group A": choices["A"],
-    #         "Group B": choices["B"],
-    #     }
-
     st.multiselect(
         label="Selected completions",
         options=choices["alias"],
@@ -158,7 +152,6 @@ def lineplot_section(diff: pd.DataFrame, docs: pd.DataFrame) -> None:
         group_a_color="blue",
         group_b_color="red",
     )
-    fig.axes[0].set_xlabel(Latex.diff, fontsize=10)
     pointplot_col, *_ = st.columns([0.5, 0.1, 0.1])
     with pointplot_col:
         st.pyplot(fig)
