@@ -5,7 +5,10 @@ import streamlit as st
 
 from lm_eval import evaluate
 from streamlit import session_state as ss
+from streamlit.logger import get_logger
+from streamlit.delta_generator import DeltaGenerator
 
+from pulse.pages.guard import pulse_guard
 from pulse.pages.state import (
     st_md,
     get_chat,
@@ -13,25 +16,28 @@ from pulse.pages.state import (
     sidebar_connection,
     persist_session_state,
 )
+from pulse.utils.tools import Placeholder as ph
 from pulse.utils.tools import apply_html
 from pulse.data.pulse_task import PulseTask
 from pulse.data.file_manager import FileStatus
 from pulse.data.task_manager import TaskStatus
 from pulse.connection.sampler import (
     get_elbows,
-    get_position_df,
     get_rankings_df,
+    get_position_table,
     get_completions_metrics,
 )
 
 init_session_state()
 persist_session_state()
 
+logger = get_logger(__name__)
 
-@st.dialog("Create persona", width="large")
+
+@st.dialog("Create personas", width="large")
 def new_persona() -> None:
     name = st.text_input("Name")
-    uploaded_files = st.file_uploader("Upload persona file", type=["csv", "json"])
+    uploaded_files = st.file_uploader("Upload persona file", type=("csv", "json"))
 
     if uploaded_files:
         # add checks
@@ -75,21 +81,22 @@ def edit_persona(selected_persona) -> None:
     st.write(selected_persona.capitalize())
     persona = ss.repo.personas[selected_persona].df
     changed = st.data_editor(persona, num_rows="dynamic")
+    logger.info(changed)
 
     if st.button("Save"):
         ss.repo.personas.update(name=selected_persona, df=changed)
-        st.toast("Updated personas.json")
+        st.toast(f"Updated {selected_persona}")
         time.sleep(0.5)
         st.rerun()
 
 
 @st.dialog("Delete Persona", width="small")
 def delete_persona(selected_persona) -> None:
-    st.error(f"Are you sure you want to delete the persona '{selected_persona}'?")
+    st.error(f"Confirm: Delete personas '{selected_persona}'?")
     if st.button("Confirm"):
         ss.repo.personas.delete(name=selected_persona)
         ss.selected_persona = None
-        st.toast("Deleted persona")
+        st.toast(f"Deleted {selected_persona}")
         time.sleep(0.5)
         st.rerun()
 
@@ -97,10 +104,16 @@ def delete_persona(selected_persona) -> None:
 @st.dialog("Create completions", width="large")
 def create_completions() -> None:
     name = st.text_input("Name")
-    st.file_uploader("Upload completions", type=["csv", "json"])
+    uploaded_files = st.file_uploader("Upload persona file", type=("csv", "json"))
 
-    columns = ["A", "B", "alias"]
-    completions_df = pd.DataFrame(columns=columns)
+    if uploaded_files:
+        # add checks
+        _, ext = uploaded_files.name.split(".")
+        completions_df = pd.read_json(uploaded_files) if ext == "json" else pd.read_csv(uploaded_files)
+    else:
+        columns = ["A", "B", "alias"]
+        completions_df = pd.DataFrame(columns=columns)
+
     changed = st.data_editor(completions_df, num_rows="dynamic")
 
     if st.button("Save"):
@@ -133,18 +146,18 @@ def edit_completions(selected_completions) -> None:
 
     if st.button("Save"):
         ss.repo.completions.update(name=selected_completions, df=changed)
-        st.toast("Updated completions.json")
+        st.toast(f"Updated {selected_completions}")
         time.sleep(0.5)
         st.rerun()
 
 
 @st.dialog("Delete Completions", width="small")
 def delete_completions(selected_completions) -> None:
-    st.error(f"Are you sure you want to delete the completions '{selected_completions}'?")
+    st.error(f"Confirm: Delete completions '{selected_completions}'?")
     if st.button("Confirm"):
         ss.repo.completions.delete(name=selected_completions)
         ss.selected_completions = None
-        st.toast("Deleted completions")
+        st.toast(f"Deleted {selected_completions}")
         time.sleep(0.5)
         st.rerun()
 
@@ -155,22 +168,26 @@ def update_task_config(key: str) -> None:
 
 def update_dataset_kwargs_docs() -> None:
     selection = ss.get("selected_persona")
-    personas = ss.repo.personas[selection].to_dict(orient="records")
+    personas = ss.repo.personas[selection].to_dict(orient="records") if selection else None
     ss.task_config.dataset_kwargs.update({"docs": personas})
 
 
-def update_dataset_kwargs_completions() -> None:
+def update_dataset_kwargs_completions(child: DeltaGenerator) -> None:
     selection = ss.get("selected_completions")
-    completions = ss.repo.completions[selection].to_dict(orient="list")
+    completions = ss.repo.completions[selection].to_dict(orient="list") if selection else None
     ss.task_config.dataset_kwargs.update({"completions": completions})
 
+    A_df, B_df = pre_rank(container=child)
+    ss.A_df, ss.B_df = A_df, B_df
 
-def completions_container() -> None:
+
+def completions_container(child: DeltaGenerator) -> None:
     st.selectbox(
         label="Select completions",
         options=ss.repo.all_completions,
         index=None,
         on_change=update_dataset_kwargs_completions,
+        args=(child,),
         key="selected_completions",
     )
     new_col, edit_col, del_col = st.columns(3)
@@ -212,11 +229,20 @@ def batch_container() -> None:
         )
 
 
-@st.dialog("lm-eval", width="small")
-def run_task(name: str) -> None:
-    # if not exists
+def pre_run() -> None:
+    task = ss.get("selected_task")
 
-    with st.spinner(f"Running {name} task "):
+    if not task:
+        st.toast("Select a Poll to run.")
+        return
+
+    run_task(name=task)
+
+
+@st.dialog("Evaluation", width="small")
+def run_task(name: str) -> None:
+    with st.spinner(f"Running {name} poll"):
+        # TODO: extract function
         task = ss.repo.task_manager[ss.selected_task]
         task = PulseTask(config=task.to_eval_dict())
 
@@ -236,24 +262,35 @@ def run_task(name: str) -> None:
     st.rerun()
 
 
-@st.dialog("Save Task", width="small")
+def pre_save() -> None:
+    for guard in pulse_guard.save_guards:
+        if guard:
+            st.toast(guard.msg)
+            return
+
+    save()
+
+
+@st.dialog("Save Poll", width="small")
 def save() -> None:
-    st.text_input("Poll Name", key="task")
+    name = st.text_input(
+        "Poll Name",
+        key="task",
+        on_change=update_task_config,
+        args=("task",),
+    )
 
-    if not ss.task:
-        st.toast("Please provide a name for the poll.")
-    elif not ss.get("selected_completions"):
-        st.toast("Please select a completion set.")
-
-    else:
-        update_task_config("task")
+    disabled = not name.strip()
+    if st.button("Save", disabled=disabled):
+        # ss.task_config["task"] = name  # or ss.task_config["name"] = name
         status = ss.repo.task_manager.add(task_config=ss.task_config)
         if status == TaskStatus.OK:
-            st.toast("Task saved successfully 👌.")
+            st.toast("Task saved successfully.")
             time.sleep(0.5)
+            ss.selected_task = name
             st.rerun()
         else:
-            st.toast(f"Save failed with status: {status}")
+            st.toast(f"Save failed: {status}")
 
 
 @st.dialog("Task Config", width="large")
@@ -262,39 +299,29 @@ def show_config() -> None:
     st.json(ss.repo.task_manager[task_config].to_json())
 
 
-with st.sidebar:
-    sidebar_connection()
-
-
-st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
-
-task_col, comp_col = st.columns(2)
-task_col.markdown("#### Create a Poll")
-comp_col.markdown("#### Completion Analysis")
-comp_cont = comp_col.container(border=True, height=800)
-
-with task_col.container(border=True, height=800):
-    tasks = ss.repo.task_manager.tasks
-    t_col, btn_col = st.columns((0.4, 0.6), vertical_alignment="bottom")
+def select_container(parent: DeltaGenerator) -> None:
+    t_col, btn_col = parent.columns((0.4, 0.6), vertical_alignment="bottom")
     t_col.selectbox(
         label="Polls",
-        options=tasks,
+        options=ss.repo.all_tasks,
         index=None,
-        placeholder="Choose a Poll",
+        placeholder="Select a Poll",
         key="selected_task",
     )
-    with btn_col:
-        save_col, run_col, del_col = st.columns(3)
-        if save_col.button("Save", use_container_width=True, key="save_task"):
-            save()
-        if run_col.button("Run", use_container_width=True, key="run_task"):
-            run_task(name=ss.selected_task)
-        if del_col.button("Delete", use_container_width=True, key="delete_task"):
-            ss.repo.task_manager.delete(task_name=ss.selected_task)
-            st.rerun()
 
-    st_md(text="Prompts")
-    with st.container(border=True):
+    save_col, run_col, del_col = btn_col.columns(3)
+    if save_col.button("Save", use_container_width=True, key="save_task"):
+        pre_save()
+    if run_col.button("Run", use_container_width=True, key="run_task"):
+        pre_run()
+    if del_col.button("Delete", use_container_width=True, key="delete_task"):
+        ss.repo.task_manager.delete(task_name=ss.selected_task)
+        st.rerun()
+
+
+def prompt_container(parent: DeltaGenerator):
+    st_md(text="Prompts", container=parent)
+    with parent.container(border=True):
         st.text_input(
             label="Persona",
             placeholder="You are {{ persona }}.",
@@ -306,54 +333,93 @@ with task_col.container(border=True, height=800):
             batch_container()
         st.text_input(
             label="Question",
-            placeholder="What will you vote for in the 2024 U.S. presidential election?",
+            placeholder=ph.question,
             on_change=update_task_config,
             args=("doc_to_text",),
             key="doc_to_text",
         )
         st.text_input(
             label="Answer",
-            placeholder="I will vote for",
+            placeholder=ph.answer,
             on_change=update_task_config,
             args=("gen_prefix",),
             key="gen_prefix",
         )
 
-    with st.container(border=True):
-        completions_container()
+
+def step(p_bar, value: int | float, text: str, delay: float = 0.0) -> None:
+    p_bar.progress(value=value, text=text)
+    time.sleep(delay)
 
 
-if st.button("Rank completions"):
-    with comp_cont:
-        if not (chat := get_chat()):
-            st.warning("Provide a prompt to analyze.")
+def pre_rank(container: DeltaGenerator) -> None:
+    for guard in pulse_guard.rank_guards:
+        if guard:
+            container.warning(guard.msg)
             st.stop()
 
-        if not (completions := ss.get("selected_completions")):
-            st.warning("Select a completions set to analyze.")
-            st.stop()
+    chat, completions = get_chat(), ss.get("selected_completions")
+    completions = ss.repo.completions[completions].to_dict(orient="list")
+    completions = completions["A"] + completions["B"]
 
-        completions = ss.repo.completions[completions].to_dict(orient="list")
-        completions = completions["A"] + completions["B"]
+    return rank(chat=chat, completions=completions, _container=container)
 
-        elbows = get_elbows(
-            lm=ss.vllm_conn.lm,
-            context=chat,
-            completions=completions,
-            v_size=ss.vllm_conn.max_logprobs,
-            v_pct=st.secrets.V_PCT,
-            min_p=st.secrets.MIN_P,
-        )
-        metrics = get_completions_metrics(lm=ss.vllm_conn.lm, context=chat, completions=completions)
-        A_df, B_df = get_rankings_df(metrics=metrics, elbows=elbows)
 
-        A_pos = get_position_df(rankings=A_df)
-        B_pos = get_position_df(rankings=B_df)
+def rank(chat: list[dict[str, str]], completions: list[str], _container: DeltaGenerator) -> tuple[pd.DataFrame]:
+    p_bar = _container.progress(value=0)
 
-        st_md(text="Side A", font_size="18px", **{"text-align": "center"})
+    step(p_bar=p_bar, value=0, text="Ranking completions", delay=1)  # 0%
+    step(p_bar=p_bar, value=0.25, text="Calculating elbow ranks")  # 25%
+    elbows = get_elbows(
+        lm=ss.vllm_conn.lm,
+        context=chat,
+        completions=completions,
+        v_size=ss.vllm_conn.max_logprobs,
+        v_pct=st.secrets.V_PCT,
+        min_p=st.secrets.MIN_P,
+    )
+
+    step(p_bar=p_bar, value=0.5, text="Calculating metrics", delay=0.5)  # 50%
+    metrics = get_completions_metrics(lm=ss.vllm_conn.lm, context=chat, completions=completions)
+
+    step(p_bar=p_bar, value=0.75, text="Splitting sides", delay=0.5)  # 75%
+    A_df, B_df = get_rankings_df(metrics=metrics, elbows=elbows)
+
+    step(p_bar=p_bar, value=1, text="Rankings complete ✔️", delay=0.5)  # 100%
+    p_bar.empty()
+
+    return A_df, B_df
+
+
+def analysis_container(parent: DeltaGenerator) -> None:
+    if (A_df := ss.get("A_df")) and (B_df := ss.get("B_df")):  # create guard
+        # Group A
+        A_pos = get_position_table(rankings=A_df)
+        st_md(text="Side A", container=parent, font_size="18px", **{"text-align": "center"})
         with st.container(border=False, height=350):
             st.table(apply_html(styler=A_pos, cell_text_color="white"))
-
-        st_md(text="Side B", font_size="18px", **{"text-align": "center"})
+        # Group B
+        B_pos = get_position_table(rankings=B_df)
+        st_md(text="Side B", container=parent, font_size="18px", **{"text-align": "center"})
         with st.container(border=False, height=350):
             st.table(apply_html(styler=B_pos, cell_text_color="white"))
+
+
+with st.sidebar:
+    sidebar_connection()
+
+HEIGHT = 800
+
+st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
+
+task_col, comp_col = st.columns(2)
+task_col.markdown("#### Create a Poll")
+comp_col.markdown("#### Completion Analysis")
+task_cont = task_col.container(border=True, height=HEIGHT)
+comp_cont = comp_col.container(border=True, height=HEIGHT)
+
+select_container(parent=task_cont)
+prompt_container(parent=task_cont)
+with task_cont.container(border=True):
+    completions_container(child=comp_cont)
+analysis_container(parent=comp_cont)
