@@ -4,14 +4,15 @@ import streamlit as st
 
 from st_pages import get_nav_from_toml
 
+from pulse.pages.state import inject_css
+
 conf_path = Path(".streamlit")
 
 st.set_page_config(layout="wide")
 
-st.html(conf_path / "styles.css")  # horizontal/vertical padding
-st.html(conf_path / "logo.css")  # header logos
+inject_css(conf_path / "styles.css")
+inject_css(conf_path / "logo.css")
 
-nav = get_nav_from_toml(path=str(conf_path / "pages_sections.toml"))
-
+nav = get_nav_from_toml(path=conf_path / "pages_sections.toml")
 pg = st.navigation(pages=nav)
 pg.run()

@@ -1,10 +1,3 @@
-/* [data-testid="stHeader"] .stAppToolbar {
-    background-image: url("app/static/elidek.png");
-    background-repeat: no-repeat;
-    background-position: 20px center;
-    background-size: auto 50px;
-} */
-
 [data-testid="stHeader"] .stAppToolbar {
     background-image: url("app/static/elidek.png"), url("app/static/icdm2025logosmall.png");
     background-position: 20px center, 180px center;

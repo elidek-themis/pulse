@@ -1,16 +1,34 @@
 import time
 
+from http import HTTPStatus
+from pathlib import Path
 from dataclasses import asdict
 
+import requests
 import streamlit as st
 
 from streamlit import session_state as ss
 from streamlit.delta_generator import DeltaGenerator
 
+from pulse.pages.guard import pulse_guard
 from pulse.utils.tools import ModelCard
 from pulse.data.pulse_task import PulseConfig
 from pulse.data.repository import Repository
 from pulse.connection.vllm_connection import VLLMConnection
+
+DELAY = 0.5
+
+
+@st.cache_data
+def load_css(file_path: Path) -> str:
+    with open(file_path) as f:
+        css = f"<style>{f.read()}</style>"
+    return css
+
+
+def inject_css(file_path: Path) -> None:
+    css_string = load_css(file_path)
+    st.markdown(css_string, unsafe_allow_html=True)
 
 
 def init_session_state() -> None:
@@ -34,14 +52,14 @@ def persist_session_state() -> None:
     if "vllm_conn" in ss:
         ss.vllm_conn = ss.vllm_conn
 
-    if "description" in ss:
-        ss.description = ss.description
+    if "persona" in ss:
+        ss.persona = ss.persona
 
-    if "doc_to_text" in ss:
-        ss.doc_to_text = ss.doc_to_text
+    if "question" in ss:
+        ss.question = ss.question
 
-    if "gen_prefix" in ss:
-        ss.gen_prefix = ss.gen_prefix
+    if "answer" in ss:
+        ss.answer = ss.answer
 
     if "selected_completions" in ss:
         ss.selected_completions = ss.selected_completions
@@ -66,31 +84,42 @@ def st_md(
     )
 
 
+def is_alive(url: str) -> bool:
+    health_endpoint = url.rstrip("/") + "/health"
+
+    try:
+        resp = requests.get(url=health_endpoint, timeout=5)
+        return resp.status_code == HTTPStatus.OK
+    except requests.RequestException:
+        return False
+
+
 def connect(url: str, api_key: str) -> None:
-    credentials = {"base_url": url, "token": api_key}
+    if is_alive(url):
+        credentials = {"base_url": url, "token": api_key}
 
-    ss.vllm_conn = VLLMConnection("vllm", type=VLLMConnection, **credentials)
-    # ss.vllm_conn = st.connection(name="vllm", type=VLLMConnection, **credentials)
-    ss.credentials = credentials
+        ss.vllm_conn = VLLMConnection("vllm", type=VLLMConnection, **credentials)
+        ss.credentials = credentials
+    else:
+        st.toast(f"Connection error @ {url}")
 
 
-def get_models() -> list[str]:
-    def _parse_model(model: dict) -> ModelCard:
+def get_models() -> list[ModelCard]:
+    def parse_model(model: dict) -> ModelCard:
         return ModelCard(id=model.get("id"), root=model.get("root"))
 
     resp = ss.vllm_conn.get_models().json()
 
-    models = [_parse_model(model) for model in resp.get("data", [])]
+    models = [parse_model(model) for model in resp.get("data", [])]
     return models
 
 
 def assign_model() -> None:
     ss.selected_model = ss._selected_model
 
-    # batch_size = st.secrets.sampling.BATCH_SIZE
     ss.vllm_conn.assign_model(model_card=ss.selected_model)
     st.toast(f"Assigned model: {ss.selected_model}")
-    time.sleep(0.5)
+    time.sleep(DELAY)
 
 
 def sidebar_connection() -> None:
@@ -107,10 +136,10 @@ def sidebar_connection() -> None:
             type="password",
         )
 
-        if st.form_submit_button("Connect"):
+        if st.form_submit_button("Connect") and url:
             connect(url=url, api_key=api_key)
 
-    if ss.get("vllm_conn"):
+    if pulse_guard.is_connected:
         models = get_models()
         index = models.index(ss.selected_model) if ss.get("selected_model") else None
 
@@ -123,7 +152,7 @@ def sidebar_connection() -> None:
         )
 
 
-def get_chat() -> str | None:
+def get_chat() -> list[dict[str, str]] | None:
     chat_history = []
 
     if ss.description:
@@ -139,3 +168,5 @@ def get_chat() -> str | None:
         return chat_history
 
     st.toast("No chat to submit.")
+
+    return None
