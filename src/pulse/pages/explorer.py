@@ -5,7 +5,9 @@ import pandas as pd
 import streamlit as st
 
 from streamlit import session_state as ss
+from streamlit.logger import get_logger
 
+from pulse.pages.guard import GUARD
 from pulse.pages.state import (
     st_md,
     get_chat,
@@ -18,6 +20,8 @@ from pulse.connection.vllm_connection import SampleRequest
 
 st.header("PULSE - Polling Using LLM-based Sentiment Extraction")
 
+logger = get_logger(__name__)
+
 init_session_state()
 persist_session_state()
 
@@ -26,25 +30,25 @@ with st.sidebar:
 
 
 def prompt_container():
-    max_logprobs = ss.vllm_conn.max_logprobs
+    max_logprobs = ss.client.max_logprobs
 
     with st.form("prompt_form"):
         st.text_input(
             label="Persona",
             placeholder=ph.persona,
-            key="description",
+            key="persona",
         )
         st.text_input(
             label="Question",
             placeholder=ph.question,
-            key="doc_to_text",
+            key="question",
         )
         answer_col, comp_col = st.columns(2)
 
         answer_col.text_input(
             label="Answer",
             placeholder=ph.answer,
-            key="gen_prefix",
+            key="answer",
         )
         comp_col.text_input(
             label="completion",
@@ -52,7 +56,6 @@ def prompt_container():
             key="completion",
             help="Mind the leading whitespace!",
         )
-        add_generation_prompt = False if (ss.gen_prefix or ss.completion) else True
 
         inp_col, btn_col = st.columns(2, vertical_alignment="bottom")
 
@@ -64,18 +67,10 @@ def prompt_container():
             step=1,
         )
 
-        extra_body = {
-            "extra_body": {
-                "logprobs": logprobs,
-                "add_generation_prompt": add_generation_prompt,
-                "echo": False,
-            }
-        }
-
         btn_col.form_submit_button(
             label="Sample next token",  # 🕵️‍♂️
             on_click=sample,
-            args=(extra_body,),
+            args=(logprobs,),
             use_container_width=True,
         )
 
@@ -83,7 +78,7 @@ def prompt_container():
 @st.cache_data
 def get_next_tokens(context: list[dict], continuation: str, extra_body: dict) -> pd.DataFrame:
     request = SampleRequest(context=context, continuation=continuation)
-    (prompt,) = ss.vllm_conn.sample(requests=[request], **extra_body)
+    (prompt,) = ss.client.sample(requests=[request], **extra_body)
     next_tokens = prompt.next_tokens
 
     logprobs = np.array([token.logprob for token in next_tokens])
@@ -102,27 +97,33 @@ def get_next_tokens(context: list[dict], continuation: str, extra_body: dict) ->
     return df.drop("logprob", axis=1)
 
 
-def sample(extra_body: dict) -> None:
+def sample(logprobs: int) -> None:
+    add_generation_prompt = False if (ss.answer or ss.completion) else True
+    extra_body = {
+        "extra_body": {
+            "logprobs": logprobs,
+            "add_generation_prompt": add_generation_prompt,
+            "echo": False,
+        }
+    }
+
     if chat := get_chat():
-        ss.sample_df = get_next_tokens(context=chat, continuation=ss.completion, extra_body=extra_body)
+        logger.info(chat)
+        ss.sample_df = get_next_tokens(
+            context=chat,
+            continuation=ss.completion,
+            extra_body=extra_body,
+        )
     else:
         ss.sample_df = None
 
 
-if not ss.get("vllm_conn"):
-    st.warning("Enter vLLM server credentials.")
-    st.stop()
-
-if not ss.get("selected_model"):
-    st.warning("Select one of the available models.")
-    st.stop()
-
-if ss.vllm_conn.lm.tokenizer.chat_template is None:
-    st.error("Selected model has no chat template.")
-    st.stop()
-
 _, column, _ = st.columns((0.2, 0.2, 0.2))
 column.subheader("Explorer")
+
+if guard := GUARD.validate(attr="connection_guards"):
+    st.error(guard.msg)
+    st.stop()
 
 st_md(text="Prompt", container=column)
 with column:

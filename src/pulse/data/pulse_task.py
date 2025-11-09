@@ -1,9 +1,8 @@
 import json
-import hashlib
 
 from typing import Any, Self
 from pathlib import Path
-from dataclasses import asdict, dataclass
+from dataclasses import field, dataclass
 from collections.abc import Callable
 
 import yaml
@@ -11,46 +10,66 @@ import numpy as np
 import datasets
 
 from lm_eval.utils import sanitize_model_name
-from lm_eval.api.task import TaskConfig, ConfigurableTask
+from lm_eval.api.task import ConfigurableTask
 from lm_eval.api.instance import Instance
 
 from pulse.utils.paths import TASKS, RESULTS
-from pulse.connection.vllm_connection import Prompt
+from pulse.connection.types import Prompt
 
 
+@dataclass
 class PulseResults:
-    metric: str = "norm_prob_diff,none"
+    model: str
+    results: dict[str, Any]
+    dataset: dict[str, Any]
 
-    def __init__(self, model: str, results: dict[str, Any]):
-        self.model = model
-        results_ = results.get("results")
+    DEFAULT_METRIC: str = field(default="norm_prob_diff,none", repr=False)
+    task: str = field(init=False)
+    metrics: dict[str, Any] = field(init=False)
+
+    def __post_init__(self) -> None:
+        results_ = self.results.get("results")
         self.task = next(iter(results_))
+        self.metrics = results_[self.task][self.DEFAULT_METRIC]
 
-        self.metrics = results_[self.task][self.metric]
-
-    def save(self):
-        """@ data/results/{task}-{model}.json"""
-        model_sanitized = sanitize_model_name(model_name=self.model)
-
-        file_path = RESULTS / f"{self.task}-{model_sanitized}.json"
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        payload = {
-            "task": self.task,
-            "model": self.model,
-            "metrics": self.metrics,
-        }
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-
-        return file_path
+        self.has_docs = bool(self.docs)
 
     def __repr__(self) -> str:
         return f"PulseResults(model={self.model}, task={self.task})"
 
     def __str__(self) -> str:
         return repr(self)
+
+    @property
+    def docs(self) -> dict[str, Any]:
+        return self.dataset.get("docs", {})
+
+    @property
+    def completions(self) -> dict[str, Any]:
+        return self.dataset.get("completions", {})
+
+    @property
+    def key(self) -> str:
+        model_sanitized = sanitize_model_name(model_name=self.model)
+        return f"{self.task}-{model_sanitized}"
+
+    def save(self) -> Path:
+        """@ data/results/key.json"""
+        file_path = RESULTS / f"{self.key}.json"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        payload = {
+            "task": self.task,
+            "model": self.model,
+            "docs": self.docs,
+            "completions": self.completions,
+            "metrics": self.metrics,
+        }
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(obj=payload, fp=f, indent=2, ensure_ascii=False)
+
+        return file_path
 
     @classmethod
     def from_json(cls, file_path: Path | str) -> Self:
@@ -61,45 +80,54 @@ class PulseResults:
         task = data["task"]
         model = data["model"]
         metrics = data["metrics"]
+        dataset = {
+            "docs": data.get("docs", {}),
+            "completions": data.get("completions", {}),
+        }
+        results = {"results": {task: {cls.DEFAULT_METRIC: metrics}}}
 
-        results = {"results": {task: {cls.metric: metrics}}}
-        return cls(model=model, results=results)
+        return cls(model=model, results=results, dataset=dataset)
 
 
 @dataclass
-class PulseConfig(TaskConfig):
-    def __post_init__(self):
-        if not self.dataset_kwargs:
-            self.dataset_kwargs = {"docs": None}
-        self.doc_to_target = -1
-        self.output_type = "loglikelihood"
-        super().__post_init__()
+class PulseConfig:
+    """Poll configuration, updated by the UI."""
 
-    @property
-    def id(self) -> str:
-        data_str = json.dumps(self.dataset_kwargs, sort_keys=True)
-        raw_str = f"{self.description}|{self.doc_to_text}|{self.gen_prefix}|{data_str}"
+    name: str | None = None
+    persona: str | None = None
+    docs: str | None = None  # reference to personas file
+    question: str | None = None
+    answer: str | None = None
+    completions: str | None = None  # reference to answers file
 
-        return hashlib.md5(raw_str.encode()).hexdigest()
+    __hash__ = None
+
+    def __eq__(self, other: object) -> bool:
+        attrs = ("persona", "question", "answer", "docs", "completions")
+        if not isinstance(other, PulseConfig):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr) for attr in attrs)
 
     @property
     def data(self) -> dict[str, Any]:
         return {
-            "task": self.task,
-            "description": self.description,
-            "doc_to_text": self.doc_to_text,
-            "gen_prefix": self.gen_prefix,
-            "dataset_kwargs": self.dataset_kwargs,
+            "name": self.name,
+            "persona": self.persona,
+            "docs": self.docs,
+            "question": self.question,
+            "answer": self.answer,
+            "completions": self.completions,
         }
 
-    def to_yaml(self):
+    def to_yaml(self) -> str:
         return yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True)
 
-    def to_json(self):
+    def to_json(self) -> str:
         return json.dumps(self.data, indent=2)
 
-    def save(self):
-        file_name = f"{self.task}.yaml"
+    def save(self) -> None:
+        file_name = f"{self.name}.yaml"
         file_path = TASKS / file_name
 
         with open(file_path, mode="w", encoding="utf-8") as file:
@@ -111,16 +139,6 @@ class PulseConfig(TaskConfig):
             data = yaml.safe_load(stream=file)
 
         return cls(**data)
-
-    def to_eval_dict(self) -> dict:
-        # ??
-        return asdict(self)
-
-    def __hash__(self) -> int:
-        return int(self.id, 16)
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, PulseConfig) and self.id == other.id
 
 
 class PulseTask(ConfigurableTask):
@@ -136,8 +154,8 @@ class PulseTask(ConfigurableTask):
         return self.dataset[self.TEST_SPLIT]
 
     def construct_requests(self, doc: dict, ctx: str, **kwargs) -> list[Instance] | Instance:
-        kwargs.pop("apply_chat_template", False)
-        kwargs.pop("chat_template", None)
+        kwargs.pop("apply_chat_template")
+        kwargs.pop("chat_template")
 
         choices = self.doc_to_choice(doc)
         target_delimiter = self.config.target_delimiter
@@ -175,11 +193,11 @@ class PulseTask(ConfigurableTask):
 
     def process_results(self, doc: dict[str, Any], results: list[Prompt]):
         alias = doc["choices"]["alias"]
-        no_choices = len(alias)
+        num_choices = len(alias)
 
         # negative log likelihoods
         lls = [prompt.continuation.logprob for prompt in results]
-        lls_a, lls_b = lls[:no_choices], lls[no_choices:]
+        lls_a, lls_b = lls[:num_choices], lls[num_choices:]
 
         # exponentiation to get probabilities
         e_a, e_b = np.exp(lls_a), np.exp(lls_b)

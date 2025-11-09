@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 
 from matplotlib.lines import Line2D
 
+from pulse.utils.tools import Latex, register_fonts
+
 STAR = {
     "xdata": [0],
     "ydata": [0],
@@ -23,9 +25,14 @@ CIRCLE = {
     "label": "predicted difference",
 }
 
+register_fonts()
+plt.rcParams["font.family"] = "Source Sans 3"
+plt.rcParams["font.weight"] = "medium"
+plt.rcParams["font.size"] = 13
+
 
 def lineplot(diff, figsize=(8, 6), group_a_color="blue", group_b_color="red") -> plt.Figure:
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = plt.subplots(figsize=figsize, dpi=300)
 
     sns.pointplot(
         data=diff,
@@ -60,11 +67,11 @@ def lineplot(diff, figsize=(8, 6), group_a_color="blue", group_b_color="red") ->
     ax.legend(
         handles=[Line2D(**CIRCLE), Line2D(**STAR)],
         loc="upper center",
-        bbox_to_anchor=(0.475, 1 + 0.075 * (7 / fig_height)),
+        bbox_to_anchor=(0.475, 1.01 + 0.075 * (7 / fig_height)),
         ncols=2,
     )
     ax.set_xticks([-1, 0, 1])
-
+    ax.set_xlabel(Latex.diff)
     plt.margins(y=0.02)
 
     return fig

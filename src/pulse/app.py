@@ -1,18 +1,18 @@
-import sys
-import pathlib
+from pathlib import Path
 
 import streamlit as st
 
 from st_pages import get_nav_from_toml
 
-# https://github.com/streamlit/streamlit/issues/10992
-torch_mod = sys.modules.get("torch")
-if torch_mod and hasattr(torch_mod, "classes"):
-    torch_mod.classes.__path__ = []
+from pulse.pages.state import load_css
+
+conf_path = Path(".streamlit")
 
 st.set_page_config(layout="wide")
-st.html(pathlib.Path(".streamlit/styles.css"))
-nav = get_nav_from_toml(".streamlit/pages_sections.toml")
 
+load_css(conf_path / "styles.css")
+load_css(conf_path / "logo.css")
+
+nav = get_nav_from_toml(path=conf_path / "pages_sections.toml")
 pg = st.navigation(pages=nav)
 pg.run()

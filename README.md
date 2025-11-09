@@ -22,12 +22,12 @@ vLLM [configuration files](data/model/) are provided for reproducibility.
 ```bash
 # i.e. serve on http://localhost:8000 and discover models in 8001-8010
 router --host localhost --port 8000 --vllm-port-start 8001 --vllm-port-end 8010
-vllm serve --config data/models/llama_3_1_8b_it.yaml --port 8001
-vllm serve --config data/models/gemma_2_27b_it.yaml --port 8002
-vllm serve --config data/models/mistral_7b_v03.yaml --port 8003
+serve data/models/llama_3_1_8b_it.yaml --port 8001
+serve data/models/gemma_2_27b_it.yaml --port 8002
+serve data/models/mistral_7b_v03.yaml --port 8003
 ```
 
-Run PULSE. \
+Run PULSE \
 The Streamlit web interface will automatically launch at: [http://localhost:8501](http://localhost:8501)
 
 ```bash

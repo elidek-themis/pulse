@@ -1,16 +1,55 @@
 import time
 
-from dataclasses import asdict
+from pathlib import Path
 
 import streamlit as st
 
 from streamlit import session_state as ss
 from streamlit.delta_generator import DeltaGenerator
 
-from pulse.utils.tools import ModelCard
+from pulse.pages.guard import GUARD
 from pulse.data.pulse_task import PulseConfig
 from pulse.data.repository import Repository
-from pulse.connection.vllm_connection import VLLMConnection
+from pulse.connection.ranker import Ranker
+from pulse.connection.vllm_connection import (
+    ModelCard,
+    HTTPStatus,
+    VLLMInstance,
+    VLLMConnection,
+)
+
+DELAY = 0.5
+
+# Caching
+
+
+@st.cache_data
+def _read_css(file_path: Path) -> str:
+    with open(file_path) as f:
+        css = f"<style>{f.read()}</style>"
+    return css
+
+
+@st.cache_resource
+def get_ranker(
+    client: VLLMConnection,
+    chat: list[dict[str, str]],
+    completions: list[str],
+    v_pct: float,
+    min_p: float,
+) -> Ranker:
+    return Ranker(
+        vllm=client,
+        chat=chat,
+        completions=completions,
+        v_pct=v_pct,
+        min_p=min_p,
+    )
+
+
+def load_css(file_path: Path) -> None:
+    css_string = _read_css(file_path)
+    st.markdown(css_string, unsafe_allow_html=True)
 
 
 def init_session_state() -> None:
@@ -25,29 +64,30 @@ def init_session_state() -> None:
         ss.api_key = None
         ss.credentials = {}
 
+    if "rank_flag" not in ss:
+        ss.rank_flag = True
+
 
 def persist_session_state() -> None:
-    if "selected_model" in ss:
-        # avoid streamlit-dataclass serialization
-        ss.selected_model = ModelCard(**asdict(ss.selected_model))
+    if selected_model := ss.get("selected_model"):
+        if isinstance(selected_model, dict):
+            ss.selected_model = ModelCard.from_dict(selected_model)
+        else:
+            ss.selected_model = selected_model
 
-    if "vllm_conn" in ss:
-        ss.vllm_conn = ss.vllm_conn
+    persist_session_keys = (
+        "vllm_conn",
+        "persona",
+        "question",
+        "answer",
+        "selected_completions",
+        "selected_persona",
+        "selected_task",
+    )
 
-    if "description" in ss:
-        ss.description = ss.description
-
-    if "doc_to_text" in ss:
-        ss.doc_to_text = ss.doc_to_text
-
-    if "gen_prefix" in ss:
-        ss.gen_prefix = ss.gen_prefix
-
-    if "selected_completions" in ss:
-        ss.selected_completions = ss.selected_completions
-
-    if "selected_persona" in ss:
-        ss.selected_persona = ss.selected_persona
+    for key in persist_session_keys:
+        if value := ss.get(key):
+            setattr(ss, key, value)
 
 
 def st_md(
@@ -67,30 +107,33 @@ def st_md(
 
 
 def connect(url: str, api_key: str) -> None:
-    credentials = {"base_url": url, "token": api_key}
+    code = VLLMConnection.is_alive(url=url)
 
-    ss.vllm_conn = VLLMConnection("vllm", type=VLLMConnection, **credentials)
-    # ss.vllm_conn = st.connection(name="vllm", type=VLLMConnection, **credentials)
-    ss.credentials = credentials
+    if code == HTTPStatus.OK:
+        credentials = {"base_url": url, "token": api_key}
+
+        ss.vllm_conn = VLLMConnection(**credentials)
+        ss.credentials = credentials
+        ss.selected_model = None
+        st.toast(f"vLLM connection - {url} - {code}")
+    else:
+        st.toast(f"{url} - {code}")
 
 
-def get_models() -> list[str]:
-    def _parse_model(model: dict) -> ModelCard:
-        return ModelCard(id=model.get("id"), root=model.get("root"))
-
-    resp = ss.vllm_conn.get_models().json()
-
-    models = [_parse_model(model) for model in resp.get("data", [])]
-    return models
+def get_models(conn: VLLMConnection) -> tuple[ModelCard]:
+    return conn.get_models()
 
 
 def assign_model() -> None:
-    ss.selected_model = ss._selected_model
+    vllm_conn: VLLMConnection = ss.vllm_conn
+    selected_model: ModelCard = ss._selected_model
+    client: VLLMInstance = vllm_conn.get_vllm_client(model_card=selected_model)
 
-    # batch_size = st.secrets.sampling.BATCH_SIZE
-    ss.vllm_conn.assign_model(model_card=ss.selected_model)
-    st.toast(f"Assigned model: {ss.selected_model}")
-    time.sleep(0.5)
+    ss.client = client
+    ss.selected_model = selected_model
+
+    st.toast(f"Assigned model: {selected_model}")
+    time.sleep(DELAY)
 
 
 def sidebar_connection() -> None:
@@ -107,12 +150,12 @@ def sidebar_connection() -> None:
             type="password",
         )
 
-        if st.form_submit_button("Connect"):
+        if st.form_submit_button("Connect") and url:
             connect(url=url, api_key=api_key)
 
-    if ss.get("vllm_conn"):
-        models = get_models()
-        index = models.index(ss.selected_model) if ss.get("selected_model") else None
+    if GUARD.is_connected:
+        models = get_models(conn=ss.vllm_conn)
+        index = models.index(model) if (model := ss.get("selected_model")) else None
 
         st.selectbox(
             label="Select a model",
@@ -123,19 +166,13 @@ def sidebar_connection() -> None:
         )
 
 
-def get_chat() -> str | None:
-    chat_history = []
+def get_chat() -> list[dict[str, str]] | None:
+    if not (clause := GUARD.has_prompts):
+        st.toast(clause.msg)
+        return None
 
-    if ss.description:
-        chat_history.append({"role": "system", "content": ss.description})
-
-    if ss.doc_to_text:
-        chat_history.append({"role": "user", "content": ss.doc_to_text})
-
-    if ss.gen_prefix:
-        chat_history.append({"role": "assistant", "content": ss.gen_prefix})
-
-    if chat_history:
-        return chat_history
-
-    st.toast("No chat to submit.")
+    return [
+        {"role": "system", "content": ss.persona},
+        {"role": "user", "content": ss.question},
+        {"role": "assistant", "content": ss.answer},
+    ]

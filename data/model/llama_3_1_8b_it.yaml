@@ -1,11 +1,11 @@
 model: meta-llama/Llama-3.1-8B-Instruct
-served_model_name: Llama 3.1 8B Instruct
+served_model_name: Llama 3.1 8B
 host: localhost
 port: 8001
-gpu_memory_utilization: 0.5
+gpu_memory_utilization: 0.25
 max_model_len: 1024
 max_logprobs: 128000
-middleware: pulse.connection.CustomRouteMiddleware
+middleware: router.CustomRouteMiddleware
 
 enable_prefix_caching: true
 enable-tokenizer-info-endpoint: true

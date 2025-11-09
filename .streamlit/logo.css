@@ -1,0 +1,9 @@
+[data-testid="stHeader"] .stAppToolbar {
+    background-image: url("app/static/elidek.png"), url("app/static/icdm2025logosmall.png");
+    background-position: 20px center, 180px center;
+    background-repeat: no-repeat, no-repeat;
+    /* first at 20px, second at (20px + first_width + gap). */
+    background-size: 140px auto, 120px auto;
+    /* padding-left = left offset + first width + gap + second width + a little extra */
+    padding-left: 320px;
+}

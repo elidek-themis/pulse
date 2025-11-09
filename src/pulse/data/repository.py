@@ -1,61 +1,92 @@
 from typing import Any
+from pathlib import Path
 
 import pandas as pd
 
-from pulse.utils.paths import RESULTS, PERSONAS, COMPLETIONS
-from pulse.data.pulse_task import PulseResults
+from pulse.utils.paths import (
+    TASKS,
+    RESULTS,
+    PERSONAS,
+    COMPLETIONS,
+)
+from pulse.data.pulse_task import PulseTask, PulseResults
 from pulse.data.file_manager import FileManager
 from pulse.data.task_manager import TaskManager
 
 
 class Repository:
+    COMPLETIONS_SCHEMA: set[str] = {"A", "B", "alias"}
+
     def __init__(self):
-        self.completions = FileManager(dir=COMPLETIONS, schema={"A", "B", "alias"})
+        self.completions = FileManager(dir=COMPLETIONS, schema=self.COMPLETIONS_SCHEMA)
         self.personas = FileManager(dir=PERSONAS, schema=None)
-        self.task_manager = TaskManager()
-        self.results: list[PulseResults] = self._read_results()
+        self.task_manager = TaskManager(dir=TASKS)
+        self.results: dict[str, PulseResults] = self._read_results(dir=RESULTS)
 
     @property
-    def all_completions(self):
-        return self.completions.data.keys()
+    def completions_keys(self):
+        return self.completions.keys
 
     @property
-    def all_personas(self):
-        return self.personas.data.keys()
+    def personas_keys(self):
+        return self.personas.keys
 
     @property
-    def all_tasks(self):
-        pass
-        # return self.task_manager.tasks.keys()
+    def task_keys(self):
+        return self.task_manager.keys
 
     @property
     def runs(self) -> pd.DataFrame:
+        results: list[PulseResults] = self.results.values()
+
         cols = ["task", "model", "metrics", "docs", "choices"]
 
         data = []
-        for result in self.results:
-            task = self.task_manager[result.task]
-            dataset_kwargs = task.dataset_kwargs
+        for result in results:
             data.append(
                 (
                     result.task,
                     result.model,
                     result.metrics,
-                    dataset_kwargs["docs"],
-                    dataset_kwargs["completions"],
+                    result.docs,
+                    result.completions,
                 )
             )
 
         return pd.DataFrame(data, columns=cols)
 
-    def add_results(self, model: str, results: dict[str, Any]) -> None:
-        pulse_results = PulseResults(model=model, results=results)
+    def add_results(self, model: str, results: dict[str, Any], dataset: dict[str, Any]) -> None:
+        pulse_results = PulseResults(model=model, results=results, dataset=dataset)
+        self.results[pulse_results.key] = pulse_results
         pulse_results.save()
-        self.results.append(pulse_results)
 
-    def _read_results(self):
-        results = []
-        for json_file in list(RESULTS.glob("*.json")):
+    def _read_results(self, dir: Path) -> dict[str, PulseResults]:
+        results = {}
+        for json_file in list(dir.glob("*.json")):
             result = PulseResults.from_json(json_file)
-            results.append(result)
+            results[json_file.stem] = result
         return results
+
+    def resolve_task(self, task_name: str) -> PulseTask:
+        defaults = {
+            "doc_to_target": -1,
+            "output_type": "loglikelihood",
+        }
+
+        task = self.task_manager[task_name]
+        docs = self.personas[task.docs].to_dict(orient="records") if task.docs else None
+        completions = self.completions[task.completions].to_dict(orient="list")
+
+        task_dict = {
+            **defaults,
+            "task": task.name,
+            "description": task.persona,
+            "doc_to_text": task.question,
+            "gen_prefix": task.answer,
+            "dataset_kwargs": {
+                "docs": docs,
+                "completions": completions,
+            },
+        }
+
+        return PulseTask(config=task_dict)

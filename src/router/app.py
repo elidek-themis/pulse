@@ -1,15 +1,16 @@
 import json
 import asyncio
 import logging
-import argparse
 
 from contextlib import asynccontextmanager
 
+import click
 import httpx
 import uvicorn
 
 from fastapi import FastAPI, Request, Response, HTTPException
 
+from router.model import VLLMModelList
 from router.router import Router
 
 logging.basicConfig(level=logging.INFO)
@@ -66,26 +67,40 @@ async def root():
     return {"message": "vLLM Router", "active_servers": len(router.model_map)}
 
 
-@app.get("/v1/models")
-async def list_models():
-    return {"object": "list", "data": router.models}
-
-
-@app.post("/refresh")
-async def manual_refresh():
+def manual_refresh():
     router.refresh()
     return {"message": "Router refreshed", "active_servers": len(router.model_map)}
 
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "HEAD"])
-async def proxy_to_vllm(path: str, request: Request):
-    """Forward request to the correct vLLM server based on model name."""
+@app.get("/health")
+async def health_check():
+    return manual_refresh()
 
+
+@app.post("/refresh")
+async def refresh():
+    return manual_refresh()
+
+
+@app.api_route("/v1/models", methods=["GET", "POST"], response_model=VLLMModelList)
+async def list_models(request: Request):
+    # Model specified - Forward to specific vLLM server
+    if model_name := await get_model_from_request(request):
+        return await proxy_to_vllm(path="v1/models", request=request, model_name=model_name)
+
+    # No model specified - return aggregated list from router
+    return router.models
+
+
+@app.api_route("/{path:path}", methods=["GET", "POST", "HEAD"])
+async def proxy_to_vllm(path: str, request: Request, model_name: str | None = None):
+    """Forward request to the correct vLLM server based on model name."""
     if not router.model_map:
         raise HTTPException(status_code=503, detail="No vLLM servers available")
 
-    # require `model` for all requests that fall through here
-    model_name = await get_model_from_request(request)
+    if not model_name:
+        model_name = await get_model_from_request(request)
+
     if not model_name:
         raise HTTPException(
             status_code=400,
@@ -107,7 +122,7 @@ async def proxy_to_vllm(path: str, request: Request):
 
     target_url = f"http://localhost:{target_port}/{path}"
 
-    # TODO: support streaming responses - no buffering (consume body once)
+    # TODO: support streaming responses
     async with httpx.AsyncClient() as client:
         response = await client.request(
             method=request.method,
@@ -125,23 +140,17 @@ async def proxy_to_vllm(path: str, request: Request):
     )
 
 
-def setup_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="vLLM Router")
-    parser.add_argument("--host", type=str, default="localhost", help="Host to bind to (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8000, help="Port to run the router on (default: 8000)")
-    parser.add_argument("--vllm-port-start", type=int, default=8001, help="Start of vLLM port range (default: 8001)")
-    parser.add_argument("--vllm-port-end", type=int, default=8010, help="End of vLLM port range (default: 8010)")
-    return parser
+@click.command()
+@click.option("--host", default="0.0.0.0", help="Host to bind to")
+@click.option("--port", default=8000, type=int, help="Port to run the router on")
+@click.option("--vllm-port-start", default=8001, type=int, help="Start of vLLM port range")
+@click.option("--vllm-port-end", default=8010, type=int, help="End of vLLM port range")
+def run(host: str, port: int, vllm_port_start: int, vllm_port_end: int):
+    """Start the vLLM router server."""
+    Router.PORT = port
+    Router.PORT_RANGE = range(vllm_port_start, vllm_port_end + 1)
 
-
-def run():
-    parser = setup_parser()
-    args = parser.parse_args()
-
-    Router.PORT = args.port
-    Router.PORT_RANGE = range(args.vllm_port_start, args.vllm_port_end + 1)
-
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info")
 
 
 if __name__ == "__main__":

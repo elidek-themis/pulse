@@ -5,7 +5,7 @@ fail_fast: true
 repos:
 # Pre-commit hooks
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
     -   id: check-merge-conflict
     -   id: trailing-whitespace
@@ -20,7 +20,7 @@ repos:
         - --unsafe  # allow !function tag
 # Ruff
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.9
+    rev: v0.13.3
     hooks:
       - id: ruff
         name: ruff linter

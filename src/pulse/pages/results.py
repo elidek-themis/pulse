@@ -10,6 +10,8 @@ from pulse.utils.tools import Latex, styler
 init_session_state()
 persist_session_state()
 
+ALIAS_COLUMN = 0
+
 
 def select(runs: pd.DataFrame) -> tuple:
     model = st.selectbox(
@@ -31,12 +33,6 @@ def select(runs: pd.DataFrame) -> tuple:
 
 def task_summary(results) -> None:
     choices = results.choices.item()
-
-    # if "choices" not in ss: # DELETE?
-    #     ss.choices = {
-    #         "Group A": choices["A"],
-    #         "Group B": choices["B"],
-    #     }
 
     st.multiselect(
         label="Selected completions",
@@ -64,12 +60,19 @@ def diff_section(results) -> pd.DataFrame:
         return x
 
     docs = results.docs.item()
+    has_docs = bool(docs)
     metrics = results.metrics.item()
 
-    index = pd.DataFrame(docs).iloc[:, 0]
+    if has_docs:
+        index = pd.DataFrame(docs).iloc[:, ALIAS_COLUMN]
+    else:
+        index = results.task.item()
 
     diff = pd.DataFrame(metrics)
-    diff.index = index.map(_escape_dollar)
+    if has_docs:
+        diff.index = index.map(_escape_dollar)
+    else:
+        diff.index = [index]
 
     diff = diff[ss.columns]
 
@@ -80,7 +83,7 @@ def diff_section(results) -> pd.DataFrame:
 
     diff_tab.table(
         data=styler(
-            diff.drop(["mean", "SE"], axis=1),
+            df=diff.drop(["mean", "SE"], axis=1),
             subset=ss.columns,
             a_color="#a4c2f4",
             b_color="#ea9999",
@@ -100,7 +103,7 @@ def diff_section(results) -> pd.DataFrame:
         agg_df = pd.DataFrame({"pred": pred, Latex.diff: agg_df["mean"], "SE": agg_df["SE"]})
 
         styled = styler(
-            agg_df,
+            df=agg_df,
             subset=["pred"],
             a_color="#a4c2f4",
             b_color="#ea9999",
@@ -109,8 +112,9 @@ def diff_section(results) -> pd.DataFrame:
         )
         df_col.table(data=styled)
 
-        with line_col:
-            lineplot_section(diff=diff, docs=pd.DataFrame(docs))
+        if has_docs:
+            with line_col:
+                lineplot_section(diff=diff, docs=pd.DataFrame(docs))
 
 
 def get_ground_truth(docs: pd.DataFrame) -> list | None:
@@ -119,7 +123,6 @@ def get_ground_truth(docs: pd.DataFrame) -> list | None:
         pct_b = docs["B pct"]
 
         return ((pct_a - pct_b) / (pct_a + pct_b)).tolist()
-        # return [a / (a + b) - b / (a + b) for a, b in zip(pct_a, pct_b)]
 
 
 def setup_sidebar() -> None:
@@ -158,7 +161,6 @@ def lineplot_section(diff: pd.DataFrame, docs: pd.DataFrame) -> None:
         group_a_color="blue",
         group_b_color="red",
     )
-    fig.axes[0].set_xlabel(Latex.diff, fontsize=10)
     pointplot_col, *_ = st.columns([0.5, 0.1, 0.1])
     with pointplot_col:
         st.pyplot(fig)

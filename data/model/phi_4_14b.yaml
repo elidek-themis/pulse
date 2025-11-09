@@ -5,7 +5,7 @@ port: 8004
 gpu_memory_utilization: 0.3
 max_model_len: 1024
 max_logprobs: 200064
-middleware: pulse.connection.CustomRouteMiddleware
+middleware: router.CustomRouteMiddleware
 
 enable_prefix_caching: true
 enable-tokenizer-info-endpoint: true
