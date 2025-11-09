@@ -1,6 +1,5 @@
 from enum import StrEnum
 from pathlib import Path
-from dataclasses import dataclass
 from collections.abc import Callable
 
 import pandas as pd
@@ -18,23 +17,6 @@ class Placeholder(StrEnum):
 
 class Latex(StrEnum):
     diff = r"$\overline{\mathrm{diff}}$"
-
-
-@dataclass
-class ModelCard:
-    id: str
-    root: str
-
-    def __str__(self):
-        return self.id
-
-    def __eq__(self, other):
-        if isinstance(other, ModelCard):
-            return self.root == other.root
-        return False
-
-    def __hash__(self):
-        return hash(self.id)
 
 
 def contains_placeholder(s: str) -> bool:

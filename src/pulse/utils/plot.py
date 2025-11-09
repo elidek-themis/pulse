@@ -27,7 +27,7 @@ CIRCLE = {
 
 register_fonts()
 plt.rcParams["font.family"] = "Source Sans 3"
-plt.rcParams["font.weight"] = "semibold"
+plt.rcParams["font.weight"] = "medium"
 plt.rcParams["font.size"] = 13
 
 

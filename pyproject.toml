@@ -3,7 +3,7 @@ name = "pulse"
 authors = [
   { name = "Christos Karanikolopoulos", email = "chkaranikolopoulos@cs.uoi.gr" },
 ]
-version = "0.2.0"
+version = "0.3.0"
 description = "PULSE - Polling Using LLM-based Sentiment Extraction"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -28,9 +28,11 @@ dependencies = [
   "seaborn>=0.13.2",
   "matplotlib>=3.10.3",
   "ipykernel>=6.29.5",
-  "st-pages>=1.0.1",
   "streamlit==1.48.0",
-  "streamlit-extras>=0.7.5",
+  "st-pages>=1.0.1",
+  "streamlit-shortcuts>=1.2.1",
+  "streamlit-hotkeys>=0.6.0",
+  "click>=8.2.1",
 ]
 
 [project.optional-dependencies]
@@ -40,8 +42,9 @@ dev = ["pre-commit>=4.2.0,<5", "ruff>=0.11.7"]
 GitHub = "https://github.com/elidek-themis/pulse"
 
 [project.scripts]
-pulse = "pulse.__init__:run"
+pulse = "pulse.cli:run"
 router = "router.app:run"
+serve = "router.cli:serve"
 
 [build-system]
 requires = ["hatchling"]
@@ -60,30 +63,33 @@ exclude = [".git", ".vscode"]
 
 [tool.ruff.lint]
 select = [
-  "I",  # isort
-  "B",  # flake8-bugbear
-  "C",  # flake8-comprehensions
-  "E",  # pycodestyle
-  "F",  # Pyflakes
-  "W",  # pycodestyle warnings
-  "B9", # flake8-bugbear
-  "UP", # pyupgrade
-  "PL", # pylint
-  # "G"  # logging
+  # linting
+  "B",    # flake8-bugbear
+  "C",    # flake8-comprehensions
+  "D200", # unnecessary-multiline-docstring
+  "D202", # blank-line-after-function
+  "E",    # pycodestyle
+  "F",    # Pyflakes
+  "PL",   # pylint
+  # formatting
+  "I",    # isort
+  "UP",   # pyupgrade
+  "W",    # pycodestyle warnings
 ]
 ignore = [
-  "W191",    # indentation-with-tabs, handled by ruff-format
-  "E731",    # lambda-assignment
   "B905",    # zip-without-explicit-strict
+  "E731",    # lambda-assignment
   "PLR0913", # too-many-arguments
-  "PLC0414", # useless-import-alias
+  "W191",    # indentation-with-tabs, handled by ruff-format
 ]
 
 [tool.ruff.lint.isort]
 from-first = false
+force-single-line = false
 length-sort = true
 lines-between-types = 1
-known-first-party = ["src"]
+known-first-party = ["pulse"]
+combine-as-imports = true
 
 [tool.ruff.format]
 quote-style = "double"
