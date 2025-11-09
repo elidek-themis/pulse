@@ -1,0 +1,22 @@
+[
+    {
+        "A":"controlled",
+        "B":"free",
+        "alias":"controlled\/free"
+    },
+    {
+        "A":"regulated",
+        "B":"unregulated",
+        "alias":"(un)regulated"
+    },
+    {
+        "A":"restricted",
+        "B":"unrestricted",
+        "alias":"(un)restricted"
+    },
+    {
+        "A":"allowed",
+        "B":"disallowed",
+        "alias":"(dis)allowed"
+    }
+]
