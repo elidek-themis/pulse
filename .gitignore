@@ -14,5 +14,5 @@ wheels/
 prototyping.ipynb
 
 # Data
-/data/results/
-/data/tasks
+/data/results/*
+/data/tasks/*
