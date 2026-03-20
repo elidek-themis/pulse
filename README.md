@@ -1,6 +1,6 @@
 ### PULSE – Polling Using LLM-based Sentiment Extraction (Demo at ICDM 2025)
 
-Available at [elidek-themis-pulse.hf.space](elidek-themis-pulse.hf.space)
+Available at [elidek-themis-pulse.hf.space](https://elidek-themis-pulse.hf.space)
 
 ![](assets/referendum.png)
 
