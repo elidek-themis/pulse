@@ -5,6 +5,9 @@ import streamlit as st
 from st_pages import get_nav_from_toml
 
 from pulse.pages.state import load_css
+from pulse.utils.login import hf_login
+
+hf_login()
 
 conf_path = Path(".streamlit")
 

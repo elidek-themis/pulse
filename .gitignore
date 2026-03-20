@@ -10,9 +10,9 @@ wheels/
 .venv
 
 # Development
+.ruff_cache/
 .vscode/
 prototyping.ipynb
 
 # Data
-/data/results/
-/data/tasks
+/data/results/*

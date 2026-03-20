@@ -1,0 +1,6 @@
+name: U.S. demographics
+persona: You are {{ persona }}.
+docs: demographics
+question: Who will you vote for in the 2024 U.S. presidential election?
+answer: I will vote for
+completions: elections

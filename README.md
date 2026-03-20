@@ -1,10 +1,12 @@
 ### PULSE – Polling Using LLM-based Sentiment Extraction (Demo at ICDM 2025)
 
-Packaged with [uv](https://github.com/astral-sh/uv) 
+Available at [elidek-themis-pulse.hf.space](elidek-themis-pulse.hf.space)
 
-PULSE is build with
+![](assets/referendum.png)
+
+PULSE is build with:
 * [vLLM](https://github.com/vllm-project/vllm)
-* [lm-eval](https://github.com/vllm-project/vllm)
+* [lm-eval](https://github.com/EleutherAI/lm-evaluation-harness)
 * [Streamlit](https://github.com/streamlit/streamlit)
 
 All dependencies, [pyproject.toml](pyproject.toml)

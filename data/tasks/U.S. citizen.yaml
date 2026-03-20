@@ -1,0 +1,6 @@
+name: U.S. citizen
+persona: You are a citizen of U.S.
+docs: null
+question: Who will you vote for in the 2024 U.S. presidential election?
+answer: I will vote for
+completions: elections
