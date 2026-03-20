@@ -68,7 +68,8 @@ class Token:
 
     @classmethod
     def from_prompt_logprob(cls, prompt_logprob: dict) -> Self:
-        token_data = next(iter(prompt_logprob.values()))
+        token_data: dict = next(iter(prompt_logprob.values()))
+
         return cls(
             token=token_data.get("decoded_token"),
             logprob=token_data.get("logprob"),
@@ -112,7 +113,7 @@ class Sequence:
             "avg_logprob": self.avg_logprob,
             "perplexity": self.ppl,
             "ranks": self.ranks,
-            "token_strings": [t.token for t in self.tokens],  # ← Add this
+            "token_strings": [t.token for t in self.tokens],
         }
 
     def __str__(self):

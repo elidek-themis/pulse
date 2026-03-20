@@ -40,10 +40,6 @@ class Guard:
         msg = "Selected model has no chat template."
 
         try:
-            print(ss.client)
-            print(ss.client.lm)
-            print(ss.client.lm.tokenizer)
-            print(ss.client.lm.tokenizer.chat_template)
             attr = ss.client.lm.tokenizer.chat_template
             cond = bool(attr)
         except AttributeError:
